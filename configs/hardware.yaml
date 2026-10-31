@@ -1,0 +1,18 @@
+# 硬件基线：必须由 scripts/check_gpu.py 在比赛服务器上实测后填写。
+# 任何一项与实测不符，都要先改这里，再改 runtime.yaml，不得沿用参考值。
+measured: false          # false = 尚未在服务器实测，禁止据此参数启动服务
+expected_from_doc:
+  gpu_name: RTX 4090
+  vram_gb: 48
+  count: 1
+measured_values:         # 由 check_gpu.py 的 gpu.json 回填
+  gpu_name: null
+  vram_total_gib: null
+  driver_version: null
+  cuda_driver_version: null
+  power_limit_w: null
+  pcie_link: null
+constraints:
+  # 显存预算的安全边界：权重 + KV Cache + 激活 + CUDA graph 必须留出余量
+  min_free_gib_before_start: 2.0
+  allow_other_gpu_processes: false

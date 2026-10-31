@@ -1,0 +1,15 @@
+# 比赛唯一指定模型。路径、版本、权重格式都必须来自实测，不得猜测。
+model:
+  name: Qwen3.8-27B
+  served_name: qwen3.8-27b-fp8
+  path: /model/ModelScope/Qwen/Qwen3.8-27B-FP8   # 服务器实际路径，由 check_model.py 校验
+  format: FP8
+  revision: TODO                                  # 必填：模型提交标识 / commit
+  tokenizer: same_as_model_path                   # AIPerf 用模型自身 tokenizer 生成 token-ID 输入
+constraints:
+  only_this_model: true        # 赛道 A 规定：不得切换或混用其它模型
+  forbid_other_models_in_report: true
+evidence:                      # 阶段 0 产出，用于回答"模型/版本/来源"
+  config_json_sha256: null
+  weights_total_gib: null
+  shard_count: null

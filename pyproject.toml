@@ -1,0 +1,36 @@
+[project]
+name = "qwen-inference-lab"
+version = "0.1.0"
+description = "单卡 RTX 4090 上的 Qwen3.8-27B 推理优化与自动化评测平台（UCloud AI 赛 · 赛道 A）"
+requires-python = ">=3.10"
+license = { text = "Proprietary" }
+
+# 平台层依赖；推理引擎（vllm）与评测工具（aiperf/evalscope）各自独立环境，
+# 见 requirements.txt 的说明，不放进这里，避免一次装出冲突的 torch。
+dependencies = [
+    "fastapi==0.162.0",
+    "uvicorn==0.54.0",
+    "pydantic==2.14.2",
+    "streamlit==1.65.0",
+    "plotly==7.1.0",
+    "pandas==2.3.3",
+    "numpy==2.2.6",
+    "PyYAML==6.0.3",
+]
+
+[project.optional-dependencies]
+# 推理引擎（需要 CUDA 13 运行时，仅在 GPU 机器上装）
+engine = ["vllm==0.31.0"]
+
+[tool.setuptools]
+# 本仓库按目录直接运行（python3 backend/main.py / streamlit run frontend/app.py），
+# 不打成 wheel；这里只声明 py_modules 为空，避免误打包。
+packages = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"

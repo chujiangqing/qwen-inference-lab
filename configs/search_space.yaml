@@ -1,0 +1,55 @@
+# AutoTuner 搜索空间与评分权重（需求书 8.2 / 8.3）
+# 只声明候选值；是否合法由 backend/optimizer/search_space.py 结合实测显存/模型配置判定。
+baseline_profile: baseline          # 参照配置：configs/runtime.json 中的 profile 名
+perf:
+  requests_per_candidate: 20        # 筛选口径（正式成绩用 100 请求/档）
+  request_timeout: 600
+accuracy:
+  enabled: false                    # 首轮只按性能筛选；最终候选再做 IFBench 复核
+  batch_size: 2
+search_space:
+  max_num_seqs:
+    - 1
+    - 2
+    - 4
+    - 8
+    - 16
+  max_num_batched_tokens:
+    - 2048
+    - 4096
+    - 8192
+    - 16384
+  mtp:
+    - false
+    - true
+  gpu_memory_utilization:
+    - 0.90
+  # 上下文是可双向调节的旋钮：往上调喂精度评测，往下调腾 KV 换并发。
+  # 基线 c8 吞吐与 c4 相同，根因是服务端 max_num_seqs=4 封顶（不是硬件饱和），
+  # 所以"缩上下文 → 换并发"这条路必须验证。
+  max_model_len:
+    - 16384
+    - 32768
+  context_max_num_seqs:
+    - 8
+    - 16
+# 维度开关（需求书 7.1–7.5）：逐个维度做单因素实验，再组合
+dimensions:
+  concurrency: true                 # 并发（客户端档位由评测协议固定 1/2/4/8）
+  batching: true                    # max_num_seqs × max_num_batched_tokens
+  context: true                     # max_model_len × max_num_seqs（缩上下文换并发）
+  kv_cache: true                    # KV Cache 类型（fp8 基线 vs bf16）
+  mtp: true                         # MTP 开关
+scoring:
+  # S = α·吞吐 + β·延迟 + γ·质量 + δ·显存；权重可配置（需求书 8.3）
+  alpha_throughput: 0.45
+  beta_latency: 0.35
+  gamma_quality: 0.15
+  delta_memory: 0.05
+  quality_threshold: 0.70           # 低于该值的配置不得评为最优
+  latency_metric: e2e_p95           # 延迟归一化使用哪个指标
+selection:
+  # 硬约束：任何一条不满足即判为无效，不参与排名
+  max_oom_retries: 0                # OOM 后不自动重试（需求书 原则 5）
+  require_complete: true            # summary 状态必须为"完整"
+  keep_top_k: 5

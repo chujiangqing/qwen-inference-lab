@@ -1,0 +1,58 @@
+{
+  "generated_at": "2026-10-31T04:21:39+00:00",
+  "nvidia_smi": "C:\\Windows\\system32\\nvidia-smi.EXE",
+  "platform": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "machine": "AMD64",
+    "python": "3.12.14",
+    "executable": "C:\\Users\\cuijiaqi\\.dsh\\dsh-runtimes\\dsh-primary-runtime\\dependencies\\python\\python.exe"
+  },
+  "gpus": [
+    {
+      "index": "0",
+      "name": "NVIDIA GeForce RTX 5060 Laptop GPU",
+      "memory_total_mib": 8151.0,
+      "memory_total_gib": 7.96,
+      "memory_used_mib": 321.0,
+      "memory_free_mib": 7490.0,
+      "driver_version": "582.05",
+      "temperature_c": 43.0,
+      "power_draw_w": 3.26,
+      "power_limit_w": null,
+      "utilization_percent": 0.0,
+      "optional": {
+        "clocks.sm": "330",
+        "clocks.mem": "405",
+        "pcie.link.gen.current": "1",
+        "pcie.link.width.current": "8",
+        "vbios_version": "98.06.2a.40.7a",
+        "compute_cap": "12.0"
+      },
+      "unsupported_fields": [
+        "ecc.mode.current",
+        "persistence_mode"
+      ],
+      "vram_matches_documented_48gb": false
+    }
+  ],
+  "warnings": [
+    "GPU0 显存 7.96 GiB 与基准记录的 48GB 不一致，需向主办方确认是否有 48GB 变体；所有显存参数必须按实测值重新计算",
+    "有 2 个进程正在使用 GPU 但当前权限读不到详情；请用 nvidia-smi 人工确认（评测期间不应有其它负载）"
+  ],
+  "query_errors": [],
+  "nvidia_smi_L": "GPU 0: NVIDIA GeForce RTX 5060 Laptop GPU (UUID: GPU-c9b8b34a-37d9-3b39-f2c7-6571aed230b6)",
+  "compute_processes": [
+    {
+      "pid": "55432",
+      "process": "[Insufficient Permissions]",
+      "memory_mib": "[N/A]",
+      "readable": false
+    },
+    {
+      "pid": "35772",
+      "process": "[Insufficient Permissions]",
+      "memory_mib": "[N/A]",
+      "readable": false
+    }
+  ]
+}

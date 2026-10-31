@@ -1,0 +1,35 @@
+# 依赖清单（版本取自比赛服务器实测，2026-10-31）
+#
+# 注意：本项目有 **三套相互隔离的 Python 环境**，不要混装：
+#   1) 平台层（本文件）：系统 python3.10，跑 FastAPI + Streamlit + 数据分析
+#   2) 推理引擎：/root/venvs/vllm031，只装 vllm（它自带 torch/transformers/flashinfer）
+#   3) 评测工具：官方 eval/run.sh 自己用 uv 建，aiperf 0.13.0 / evalscope[ifbench] 1.13.0
+#
+# 安装：
+#   pip3 install --user -r requirements.txt
+#
+# 为什么用 --user：比赛服务器不让改系统环境，装到 ~/.local 即可，卸载只需删该目录。
+
+# --- Web 后端 ---
+fastapi==0.162.0
+uvicorn==0.54.0
+pydantic==2.14.2
+
+# --- Web 前端 ---
+streamlit==1.65.0
+plotly==7.1.0
+
+# --- 数据处理 / 配置 ---
+pandas==2.3.3
+numpy==2.2.6
+PyYAML==6.0.3
+
+# --- 推理引擎（单独 venv，版本必须与模型架构匹配）---
+# vllm==0.31.0        ← 必须；它的 ModelRegistry 里有 Qwen3_5ForConditionalGeneration / Qwen3_5MTP
+#   torch 2.13.0+cu130 / transformers 5.17.0 / triton 3.7.1 / flashinfer-python 0.7.0.post1 由 vllm 自动拉取
+#   安装：python3 -m venv /root/venvs/vllm031 && /root/venvs/vllm031/bin/pip install vllm==0.31.0
+
+# --- 评测工具（由官方 eval.zip 管理，不要在这里 pin）---
+# aiperf==0.13.0
+# evalscope[ifbench]==1.13.0
+# 安装：bash eval/run.sh --mode all ...（交互确认后它会用 uv 建隔离环境）

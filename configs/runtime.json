@@ -1,0 +1,61 @@
+{
+  "_comment": "阶段 1 运行时配置。所有参数集中在此，脚本不得硬编码。改参数只改这个文件。",
+  "model": {
+    "path": "/model/ModelScope/Qwen/Qwen3.8-27B-FP8",
+    "served_name": "qwen3.8-27b-fp8",
+    "tokenizer": null
+  },
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8088,
+    "venv": "/root/venvs/vllm031",
+    "log_dir": "/root/logs/vllm",
+    "pid_file": "/root/logs/vllm/vllm.pid",
+    "api_key_env": "OPENAI_API_KEY",
+    "startup_timeout_seconds": 900
+  },
+  "profiles": {
+    "baseline": {
+      "description": "基准文档原参数：32768 上下文、max_num_seqs=4、FP8 KV、不开 MTP",
+      "tensor_parallel_size": 1,
+      "dtype": "auto",
+      "gpu_memory_utilization": 0.9,
+      "max_model_len": 32768,
+      "max_num_seqs": 4,
+      "kv_cache_dtype": "fp8",
+      "reasoning_parser": "qwen3",
+      "enable_prefix_caching": false,
+      "speculative_config": null,
+      "extra_args": []
+    },
+    "accuracy": {
+      "description": "精度评测专用：上下文提到 40960，避免 eval.zip 因 max_model_len<=32768 跳过 IFBench",
+      "tensor_parallel_size": 1,
+      "dtype": "auto",
+      "gpu_memory_utilization": 0.9,
+      "max_model_len": 40960,
+      "max_num_seqs": 4,
+      "kv_cache_dtype": "fp8",
+      "reasoning_parser": "qwen3",
+      "enable_prefix_caching": false,
+      "speculative_config": null,
+      "extra_args": []
+    },
+    "mtp": {
+      "description": "MTP 对照实验：投机解码 3 个 token，其余与 baseline 相同",
+      "tensor_parallel_size": 1,
+      "dtype": "auto",
+      "gpu_memory_utilization": 0.9,
+      "max_model_len": 32768,
+      "max_num_seqs": 4,
+      "kv_cache_dtype": "fp8",
+      "reasoning_parser": "qwen3",
+      "enable_prefix_caching": false,
+      "speculative_config": {
+        "method": "mtp",
+        "num_speculative_tokens": 3
+      },
+      "extra_args": []
+    }
+  }
+}

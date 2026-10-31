@@ -1,0 +1,186 @@
+{
+  "generated_at": "2026-10-31T04:21:43+00:00",
+  "eval_dir": "D:\\Users\\cuijiaqi\\Documents\\deepseek-harness\\default-workspace\\Qwen-Inference-Lab\\eval",
+  "documented_versions": {
+    "aiperf": "0.13.0",
+    "evalscope": "1.13.0"
+  },
+  "warnings": [
+    "未能验证 AIPerf 参数（隔离环境未准备）：参数名是否被 0.13.0 支持，需要在服务器实测确认"
+  ],
+  "integrity": {
+    "zip": "D:\\Users\\cuijiaqi\\Documents\\deepseek-harness\\default-workspace\\Qwen-Inference-Lab\\eval\\eval.zip",
+    "zip_present": true,
+    "members": {
+      "README.md": {
+        "expected": "52fa5d2a74d012e254bb93bbb8dee183af5a6507b8185f8b3b6b07197d954a3d",
+        "actual": "52fa5d2a74d012e254bb93bbb8dee183af5a6507b8185f8b3b6b07197d954a3d",
+        "present": true,
+        "match": true
+      },
+      "runner.py": {
+        "expected": "66d30de4f2f4a39b7243226d76f8be95a5e2e44ebe9e26e7c7e4f45bfe0b77ab",
+        "actual": "66d30de4f2f4a39b7243226d76f8be95a5e2e44ebe9e26e7c7e4f45bfe0b77ab",
+        "present": true,
+        "match": true
+      },
+      "run.sh": {
+        "expected": "078a2677038dbf3590b0e148546962aa27b00ef8dd11a14bbc272a96d8bc00fb",
+        "actual": "078a2677038dbf3590b0e148546962aa27b00ef8dd11a14bbc272a96d8bc00fb",
+        "present": true,
+        "match": true
+      }
+    },
+    "modified": [],
+    "missing": [],
+    "zip_sha256": "9075ba2e020b0c93a3c36ff1c1374661723db97a57771257448bbcbbeda9c58f"
+  },
+  "runner_facts": {
+    "cli_options": [
+      {
+        "flag": "--mode",
+        "default": "all"
+      },
+      {
+        "flag": "--base-url",
+        "default": null
+      },
+      {
+        "flag": "--model",
+        "default": null
+      },
+      {
+        "flag": "--tokenizer",
+        "default": "builtin"
+      },
+      {
+        "flag": "--tokenizer-revision",
+        "default": null
+      },
+      {
+        "flag": "--api-key-env",
+        "default": "OPENAI_API_KEY"
+      },
+      {
+        "flag": "--output-dir",
+        "default": null
+      },
+      {
+        "flag": "--env-dir",
+        "default": "Path.home() / '.cache/ai-infra-eval/envs'"
+      },
+      {
+        "flag": "--perf-requests",
+        "default": 100
+      },
+      {
+        "flag": "--eval-batch-size",
+        "default": 2
+      },
+      {
+        "flag": "--request-timeout",
+        "default": 600
+      },
+      {
+        "flag": "--seed",
+        "default": 42
+      },
+      {
+        "flag": "--dry-run",
+        "default": null
+      }
+    ],
+    "aiperf_flags": [
+      "--api-key",
+      "--artifact-dir",
+      "--concurrency",
+      "--custom-dataset-type",
+      "--dataset-sampling-strategy",
+      "--endpoint",
+      "--endpoint-type",
+      "--export-level",
+      "--extra-inputs",
+      "--input-file",
+      "--model",
+      "--no-gpu-telemetry",
+      "--random-seed",
+      "--request-count",
+      "--request-timeout-seconds",
+      "--streaming",
+      "--tokenizer",
+      "--tokenizer-revision",
+      "--ui",
+      "--url",
+      "--use-legacy-max-tokens",
+      "--use-server-token-count",
+      "--warmup-request-count",
+      "--workers-max"
+    ],
+    "accuracy_config_keys": [
+      "api_key_env",
+      "api_url",
+      "datasets",
+      "eval_batch_size",
+      "eval_type",
+      "generation_config",
+      "limit",
+      "model",
+      "no_timestamp",
+      "work_dir"
+    ],
+    "constants": {
+      "CONCURRENCIES": [
+        1,
+        2,
+        4,
+        8
+      ],
+      "PACKAGES": {
+        "perf": [
+          "aiperf",
+          "0.13.0"
+        ],
+        "accuracy": [
+          "evalscope[ifbench]",
+          "1.13.0"
+        ]
+      },
+      "IF_METRICS": [
+        "prompt_level_strict",
+        "inst_level_strict",
+        "prompt_level_loose",
+        "inst_level_loose"
+      ]
+    },
+    "packages": {
+      "perf": [
+        "aiperf",
+        "0.13.0"
+      ],
+      "accuracy": [
+        "evalscope[ifbench]",
+        "1.13.0"
+      ]
+    }
+  },
+  "runtime": {
+    "env_dir": "C:\\Users\\cuijiaqi\\.cache\\ai-infra-eval\\envs",
+    "environments": {
+      "perf": {
+        "python": "C:\\Users\\cuijiaqi\\.cache\\ai-infra-eval\\envs\\aiperf-0.13.0\\bin\\python",
+        "present": false
+      },
+      "accuracy": {
+        "python": "C:\\Users\\cuijiaqi\\.cache\\ai-infra-eval\\envs\\evalscope-1.13.0\\bin\\python",
+        "present": false
+      }
+    },
+    "flags_verified": null,
+    "note": "隔离环境尚未准备（任务 0 不允许安装）。请在服务器交互终端执行 `bash eval/run.sh --mode check` 并按提示确认安装后，再次运行本脚本。"
+  },
+  "dry_run": {
+    "ok": true,
+    "stdout": "{\n  \"uv\": null,\n  \"bootstrap_python\": \"C:\\\\Users\\\\cuijiaqi\\\\.dsh\\\\dsh-runtimes\\\\dsh-primary-runtime\\\\dependencies\\\\python\\\\python.exe\",\n  \"python312\": \"C:\\\\Users\\\\cuijiaqi\\\\.dsh\\\\dsh-runtimes\\\\dsh-primary-runtime\\\\dependencies\\\\python\\\\python.exe\",\n  \"tools\": {\n    \"perf\": {\n      \"ready\": false,\n      \"missing\": [\n        \"独立虚拟环境\"\n      ],\n      \"python\": \"C:\\\\Users\\\\cuijiaqi\\\\.cache\\\\ai-infra-eval\\\\envs\\\\aiperf-0.13.0\\\\bin\\\\python\"\n    },\n    \"accuracy\": {\n      \"ready\": false,\n      \"missing\": [\n        \"独立虚拟环境\"\n      ],\n      \"python\": \"C:\\\\Users\\\\cuijiaqi\\\\.cache\\\\ai-infra-eval\\\\envs\\\\evalscope-1.13.0\\\\bin\\\\python\"\n    }\n  },\n  \"global_commands\": {\n    \"aiperf\": null,\n    \"evalscope\": null\n  }\n}\n'C:\\Users\\cuijiaqi\\.cache\\ai-infra-eval\\envs\\aiperf-0.13.0\\bin\\aiperf' profile --model probe-model --url http://127.0.0.1:9 --endpoint /v1/completions --endpoint-type completions --streaming --tokenizer builtin --use-server-token-count --use-legacy-max-tokens --input-file '<OUTPUT>\\performance\\dataset.jsonl' --custom-dataset-type single-turn --dataset-sampling-strategy sequential --random-seed 42 --extra-inputs '{\"ignore_eos\": true, \"temperature\": 0, \"cache_salt\": \"<RUN_ID>:c1\"}' --concurrency 1 --request-count 100 --warmup-request-count 8 --workers-max 2 --request-timeout-seconds 600 --export-level records --artifact-dir '<OUTPUT>\\performance\\c1' --ui none --no-gpu-telemetry --api-key '<API_KEY_FROM_ENV>'\n'C:\\Users\\cuijiaqi\\.cache\\ai-infra-eval\\envs\\aiperf-0.13.0\\bin\\aiperf' profile --model probe-model --url http://127.0.0.1:9 --endpoint /v1/completions --endpoint-type completions --streaming --tokenizer builtin --use-server-token-count --use-legacy-max-tokens --input-file '<OUTPUT>\\performance\\dataset.jsonl' --custom-dataset-type single-turn --dataset-sampling-strategy sequential --random-seed 42 --extra-inputs '{\"ignore_eos\": true, \"temperature\": 0, \"cache_salt\": \"<RUN_ID>:c2\"}' --concurrency 2 --request-count 100 --warmup-request-count 8 --workers-max 2 --request-timeout-seconds 600 --export-level records --artifact-dir '<OUTPUT>\\performance\\c2' --ui none --no-gpu-telemetry --api-key '<API_KEY_FROM_ENV>'\n'C:\\Users\\cuijiaqi\\.cache\\ai-infra-eval\\envs\\aiperf-0.13.0\\bin\\aiperf' profile --model probe-model --url http://127.0.0.1:9 --endpoint /v1/completions --endpoint-type completions --streaming --tokenizer builtin --use-server-token-count --use-legacy-max-tokens --input-file '<OUTPUT>\\performance\\dataset.jsonl' --custom-dataset-type single-turn --dataset-sampling-strategy sequential --random-seed 42 --extra-inputs '{\"ignore_eos\": true, \"temperature\": 0, \"cache_salt\": \"<RUN_ID>:c4\"}' --concurrency 4 --request-count 100 --warmup-request-count 8 --workers-max 2 --request-timeout-seconds 600 --export-level records --artifact-dir '<OUTPUT>\\performance\\c4' --ui none --no-gpu-telemetry --api-key '<API_KEY_FROM_ENV>'\n'C:\\Users\\cuijiaqi\\.cache\\ai-infra-eval\\envs\\aiperf-0.13.0\\bin\\aiperf' profile --model probe-model --url http://127.0.0.1:9 --endpoint /v1/completions --endpoint-type completions --streaming --tokenizer builtin --use-server-token-count --use-legacy-max-tokens --input-file '<OUTPUT>\\performance\\dataset.jsonl' --custom-dataset-type single-turn --dataset-sampling-strategy sequential --random-seed 42 --extra-inputs '{\"ignore_eos\": true, \"temperature\": 0, \"cache_salt\": \"<RUN_ID>:c8\"}' --concurrency 8 --request-count 100 --warmup-request-count 8 --workers-max 2 --request-timeout-seconds 600 --export-level records --artifact-dir '<OUTPUT>\\performance\\c8' --ui none --no-gpu-telemetry --api-key '<API_KEY_FROM_ENV>'\n{\n  \"model\": \"probe-model\",\n  \"api_url\": \"http://127.0.0.1:9/v1\",\n  \"api_key_env\": \"OPENAI_API_KEY\",\n  \"eval_type\": \"openai_api\",\n  \"datasets\": [\n    \"ifbench\"\n  ],\n  \"limit\": 100,\n  \"eval_batch_size\": 2,\n  \"generation_config\": {\n    \"max_tokens\": 32768\n  },\n  \"work_dir\": \"<OUTPUT>\\\\accuracy\\\\native\",\n  \"no_timestamp\": true\n}",
+    "stderr": ""
+  }
+}

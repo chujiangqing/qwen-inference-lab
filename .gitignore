@@ -1,0 +1,11 @@
+﻿__pycache__/
+*.pyc
+tests/_tmp/
+reports/manual/
+reports/task0_*/
+audit/_tmp/
+# 内含服务器地址与登录口令，绝不入库
+.ssh_helper/
+data/*.db
+experiments/
+*.tgz

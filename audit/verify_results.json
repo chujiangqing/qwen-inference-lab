@@ -1,0 +1,412 @@
+{
+  "source": "D:\\Users\\cuijiaqi\\Documents\\deepseek-harness\\default-workspace\\Qwen-Inference-Lab\\eval\\runner.py",
+  "total": 76,
+  "failed": [],
+  "results": [
+    {
+      "check": "normalize http://h:8088/v1 -> http://h:8088/v1",
+      "pass": true,
+      "detail": "http://h:8088/v1"
+    },
+    {
+      "check": "normalize http://h:8088 -> http://h:8088/v1",
+      "pass": true,
+      "detail": "http://h:8088/v1"
+    },
+    {
+      "check": "normalize http://h:8088/v1/ -> http://h:8088/v1",
+      "pass": true,
+      "detail": "http://h:8088/v1"
+    },
+    {
+      "check": "normalize https://host/proxy/v1 -> https://host/proxy/v1",
+      "pass": true,
+      "detail": "https://host/proxy/v1"
+    },
+    {
+      "check": "normalize http://h/openai -> http://h/openai/v1",
+      "pass": true,
+      "detail": "http://h/openai/v1"
+    },
+    {
+      "check": "reject http://u:p@h/v1",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "reject http://h/v1?a=1",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "reject http://h/v1#x",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "reject http://h/v1/completions",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "reject file:///tmp/v1",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "reject ftp://h/v1",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "note: http://h/v1beta is rewritten to .../v1beta/v1",
+      "pass": true,
+      "detail": "http://h/v1beta/v1"
+    },
+    {
+      "check": "p50 of even count interpolates",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "p95 of single value is that value",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "p99 <= max",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "distribution keys",
+      "pass": true,
+      "detail": {
+        "mean": 2.0,
+        "p50": 2.0,
+        "p95": 2.9,
+        "p99": 2.98
+      }
+    },
+    {
+      "check": "n=12 P95 is an extrapolation between 11th/12th order stats",
+      "pass": true,
+      "detail": 10.45
+    },
+    {
+      "check": "n=12: only ~0.6 samples above P95",
+      "pass": true,
+      "detail": 0.6
+    },
+    {
+      "check": "parse_performance: clean 12/8192/512 -> 完整",
+      "pass": true,
+      "detail": "完整 []"
+    },
+    {
+      "check": "parse_performance: one profiling record missing -> 异常",
+      "pass": true,
+      "detail": "异常 ['正式记录 11、有效记录 11，期望 12', 'time_to_first_token p50 与原生汇总不一致', 'time_to_first_token p95 与原生汇总不一致', 'time_to_first_token p99 与原生汇总不一致', 'inter_token_latency p50 与原生汇总不一致', 'inter_token_latency p95 与原生汇总不一致', 'inter_token_latency p99 与原生汇总不一致', 'request_latency p50 与原生汇总不一致', 'request_latency p95 与原生汇总不一致', 'request_latency p99 与原生汇总不一致']"
+    },
+    {
+      "check": "parse_performance: native P95 tampered -> 异常",
+      "pass": true,
+      "detail": "异常 ['time_to_first_token p95 与原生汇总不一致']"
+    },
+    {
+      "check": "parse_performance: TTFT unit seconds -> 异常",
+      "pass": true,
+      "detail": "异常 ['time_to_first_token 单位不是 ms', 'inter_token_latency 单位不是 ms', 'request_latency 单位不是 ms']"
+    },
+    {
+      "check": "parse_performance: ISL 8191 strict -> 异常",
+      "pass": true,
+      "detail": "异常 ['未完成 8 个正确长度的预热请求', '服务端实际 token 数不符合 8192/512']"
+    },
+    {
+      "check": "parse_performance: OSL 511 -> 异常",
+      "pass": true,
+      "detail": "异常 ['未完成 8 个正确长度的预热请求', '服务端实际 token 数不符合 8192/512']"
+    },
+    {
+      "check": "parse_performance: 7 warmups -> 异常",
+      "pass": true,
+      "detail": "异常 ['未完成 8 个正确长度的预热请求']"
+    },
+    {
+      "check": "parse_performance: warmup length wrong -> 异常",
+      "pass": true,
+      "detail": "异常 ['未完成 8 个正确长度的预热请求']"
+    },
+    {
+      "check": "parse_performance: run cancelled -> 异常",
+      "pass": true,
+      "detail": "异常 ['AIPerf 未完整结束']"
+    },
+    {
+      "check": "parse_performance: request errors -> 异常",
+      "pass": true,
+      "detail": "异常 ['存在请求失败、缺失或工具错误']"
+    },
+    {
+      "check": "parse_performance: expected 100 but ran 12 -> 异常",
+      "pass": true,
+      "detail": "异常 ['正式记录 12、有效记录 12，期望 100', '存在请求失败、缺失或工具错误']"
+    },
+    {
+      "check": "parse_performance: builtin mode tolerates non-8192 ISL -> 完整",
+      "pass": true,
+      "detail": "完整 []"
+    },
+    {
+      "check": "scalar request_count escapes as AttributeError",
+      "pass": true,
+      "detail": "AttributeError"
+    },
+    {
+      "check": "run_performance() does not catch AttributeError",
+      "pass": true,
+      "detail": [
+        "EvaluationError",
+        "OSError",
+        "ValueError",
+        "KeyError",
+        "TypeError"
+      ]
+    },
+    {
+      "check": "run_performance() does not catch IndexError",
+      "pass": true,
+      "detail": [
+        "EvaluationError",
+        "OSError",
+        "ValueError",
+        "KeyError",
+        "TypeError"
+      ]
+    },
+    {
+      "check": "parse_accuracy: clean 100 samples -> 完整",
+      "pass": true,
+      "detail": "完整 []"
+    },
+    {
+      "check": "parse_accuracy: 99 predictions -> 异常",
+      "pass": true,
+      "detail": "异常 ['预测记录数 99，期望 100']"
+    },
+    {
+      "check": "parse_accuracy: sample error flag -> 异常",
+      "pass": true,
+      "detail": "异常 ['预测记录包含推理错误']"
+    },
+    {
+      "check": "parse_accuracy: missing execution_summary -> 异常",
+      "pass": true,
+      "detail": "异常 ['缺少原生 execution_summary，不能核验完整性']"
+    },
+    {
+      "check": "parse_accuracy: missing metric -> 异常",
+      "pass": true,
+      "detail": "异常 ['inst_level_loose 缺少有效原生分数']"
+    },
+    {
+      "check": "parse_accuracy: score 1.5 -> 异常",
+      "pass": true,
+      "detail": "异常 ['prompt_level_strict 缺少有效原生分数']"
+    },
+    {
+      "check": "instruction-level num>100 is accepted (per README)",
+      "pass": true,
+      "detail": []
+    },
+    {
+      "check": "prompt-level num=90 is rejected",
+      "pass": true,
+      "detail": [
+        "prompt_level_strict 有效评分样本不是 100"
+      ]
+    },
+    {
+      "check": "defaults: perf_requests=100, batch=2, timeout=600, tokenizer=builtin",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "reject batch 0",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "reject requests 0",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "reject timeout 0",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "reject revision with builtin",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "reject missing base-url",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "aiperf_command: endpoint path is /proxy/v1/completions",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "aiperf_command: url is bare origin",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "aiperf_command: no gpu telemetry",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "aiperf_command: 2 workers",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "aiperf_command: export level records",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "aiperf_command: extra inputs carry ignore_eos/temperature/cache_salt",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "aiperf_command: legacy max tokens flag",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "aiperf_command: --tokenizer builtin preserved",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "render_report: has performance table row",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "render_report: TTFT converted ms->s",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "render_report: TPOT stays ms",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "render_report: primary metric highlighted",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "render_report: no unexplained exception section",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "render_report: clean run has no issue bullets",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "redact removes literal secret",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "redact leaves EMPTY alone",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "document derived columns are self-consistent (<0.1%)",
+      "pass": true,
+      "detail": "max rel err 1.11e-04"
+    },
+    {
+      "check": "TTFT + TPOT*(OSL-1) is within 15% of end-to-end for every row",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "note: per-level request counts are NOT uniform (12/24/24/32/24)",
+      "pass": true,
+      "detail": [
+        12,
+        24,
+        24,
+        32,
+        24
+      ]
+    },
+    {
+      "check": "concurrency 8 gives no throughput gain over 4 (+0.02%)",
+      "pass": true,
+      "detail": "1.00015"
+    },
+    {
+      "check": "concurrency 8 TTFT P95 is 4.45x concurrency 4",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "concurrency 8 E2E P95 is 1.93x concurrency 4",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "c2 24-sample vs 100-sample throughput agree within 0.1%",
+      "pass": true,
+      "detail": "0.999524"
+    },
+    {
+      "check": "c2 24-sample vs 100-sample TTFT P95 differ by 9%",
+      "pass": true,
+      "detail": "1.0901"
+    },
+    {
+      "check": "100-sample score has ~4pp binomial SE",
+      "pass": true,
+      "detail": 0.0414
+    },
+    {
+      "check": "80% vs 76% is inside 1 SE (not a detectable difference)",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "eval.zip gates accuracy when max_model_len == 32768",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "eval.zip allows accuracy when max_model_len == 40960",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "eval.zip allows accuracy when /models reports nothing",
+      "pass": true,
+      "detail": ""
+    }
+  ]
+}

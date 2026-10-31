@@ -1,0 +1,27 @@
+# 评测口径。两套口径并存，任何报告必须标明用的是哪一套。
+# 口径 A：直接调用官方 eval/run.sh（可复现、口径固定，正式成绩以此为准）
+# 口径 B：直接调用 AIPerf，复现基准文档的原始协议（仅用于对照与调优实验）
+protocol_a_eval_zip:
+  tool: eval/run.sh
+  isl: 8192
+  osl: 512
+  warmup_requests: 8                      # runner.py 硬编码，不可配置
+  concurrencies: [1, 2, 4, 8]             # runner.py 硬编码，不可配置
+  requests_per_level: 100                 # --perf-requests 可配置
+  request_timeout_s: 600                  # --request-timeout 可配置
+  input_basis: tiktoken/o200k_base        # 默认；传 --tokenizer 模型路径切换为模型 token-ID
+  generation: {temperature: 0, ignore_eos: true}
+  accuracy: {dataset: ifbench, limit: 100, eval_batch_size: 2, max_tokens: 32768}
+protocol_b_reference_doc:
+  tool: aiperf (直接调用)
+  isl: 8192
+  osl: 512
+  warmup_requests: max(4, concurrency)
+  concurrencies: [1, 2, 4, 8, 3]
+  requests_per_level: [12, 24, 24, 32, 24]  # 文档每档请求数不一致，需在报告中说明
+  request_timeout_s: 180
+  input_basis: model tokenizer token-IDs
+  note: 文档还说明逐档使用不同随机种子、不添加公共前缀、GPU 每秒采样
+comparability_warning: |
+  两套口径的 warmup、并发档位、请求数、超时、输入计数基准都不同，
+  因此 A 口径的结果不能直接与文档基线逐项对比；跨口径只允许比较趋势，不允许比较绝对数值。
