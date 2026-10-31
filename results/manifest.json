@@ -1,4 +1,101 @@
 {
-  "files": [],
-  "count": 0
+  "files": [
+    {
+      "path": "experiments/AUTOTUNER_ctx16384_seq16_111238_20261031_111238/benchmark_result.json",
+      "bytes": 4594,
+      "sha256": "3da992404cc639818204eae9b0c382242d8f825b6696845a630646cbcf5b2b9f",
+      "source": "experiments/AUTOTUNER_ctx16384_seq16_111238_20261031_111238/benchmark_result.json"
+    },
+    {
+      "path": "experiments/AUTOTUNER_ctx16384_seq8_104748_20261031_104748/benchmark_result.json",
+      "bytes": 4621,
+      "sha256": "e73ceba074948e598531dae979d382fe08f0e24f69e3927cb541dd76205c3c1e",
+      "source": "experiments/AUTOTUNER_ctx16384_seq8_104748_20261031_104748/benchmark_result.json"
+    },
+    {
+      "path": "experiments/AUTOTUNER_mtp_on_113802_20261031_113802/benchmark_result.json",
+      "bytes": 4575,
+      "sha256": "d48994211796bb106f2939d2deacf7353ca384306e631d7a7305b6fc7ca5f1b6",
+      "source": "experiments/AUTOTUNER_mtp_on_113802_20261031_113802/benchmark_result.json"
+    },
+    {
+      "path": "experiments/E00_BASELINE_PERF_20261031_053524/performance/c1/summary.json",
+      "bytes": 1187,
+      "sha256": "2886f31d395f301379ee15e1a53d059dde6c9a906eee361c2f906dfd974b25d4",
+      "source": "experiments/E00_BASELINE_PERF_20261031_053524/performance/c1/summary.json"
+    },
+    {
+      "path": "experiments/E00_BASELINE_PERF_20261031_053524/performance/c2/summary.json",
+      "bytes": 454,
+      "sha256": "a411e79dfc08e85c137b69afccf44d8571133caa4bf7613e376d67a1bccde002",
+      "source": "experiments/E00_BASELINE_PERF_20261031_053524/performance/c2/summary.json"
+    },
+    {
+      "path": "experiments/E00_BASELINE_PERF_20261031_053524/performance/c4/summary.json",
+      "bytes": 454,
+      "sha256": "445370fe72cd838be1bc4e71166797ea5c8dbd458ba5186ef3364e82c35b21f4",
+      "source": "experiments/E00_BASELINE_PERF_20261031_053524/performance/c4/summary.json"
+    },
+    {
+      "path": "experiments/E00_BASELINE_PERF_20261031_053524/performance/c8/summary.json",
+      "bytes": 454,
+      "sha256": "2c9748682463aa45ee3ae7acbb158011d6fb6db409a47e04dce6e9a666d02010",
+      "source": "experiments/E00_BASELINE_PERF_20261031_053524/performance/c8/summary.json"
+    },
+    {
+      "path": "experiments/E00_BASELINE_PERF_20261031_055409/performance/c1/summary.json",
+      "bytes": 1077,
+      "sha256": "844f86c3b02103fe581648594e223746c1be621b01fde3453f0527194dd69c29",
+      "source": "experiments/E00_BASELINE_PERF_20261031_055409/performance/c1/summary.json"
+    },
+    {
+      "path": "experiments/E00_BASELINE_PERF_20261031_055409/performance/c2/summary.json",
+      "bytes": 1074,
+      "sha256": "5b3a5041d34aa8be1c01c13289e878cbf162aa68d7ce7f0bb534346c943c98d6",
+      "source": "experiments/E00_BASELINE_PERF_20261031_055409/performance/c2/summary.json"
+    },
+    {
+      "path": "experiments/E00_BASELINE_PERF_20261031_055409/performance/c4/summary.json",
+      "bytes": 1078,
+      "sha256": "792965643a2089eaddb074774ee2221c25759dccbf5bda8f7f543432c4d7133f",
+      "source": "experiments/E00_BASELINE_PERF_20261031_055409/performance/c4/summary.json"
+    },
+    {
+      "path": "experiments/E00_BASELINE_PERF_20261031_055409/performance/c8/summary.json",
+      "bytes": 1068,
+      "sha256": "12c1a36ba97c059ab4e50a7e72dcc518ee2e443ba68c9377de870278426b282c",
+      "source": "experiments/E00_BASELINE_PERF_20261031_055409/performance/c8/summary.json"
+    },
+    {
+      "path": "experiments/accuracy/accuracy/summary.json",
+      "bytes": 319,
+      "sha256": "01fd03c04bea614ab3d767f01eedd8efdc1aa63715a18b34b07a9ed52c6a9186",
+      "source": "experiments/E00_BASELINE_ACC2_20261031_081016/accuracy/summary.json"
+    },
+    {
+      "path": "experiments/accuracy/accuracy/summary.json",
+      "bytes": 317,
+      "sha256": "b537a27c1135805fd3d44595e714303c8c0e8297a802a89cb16563fd9b9298f9",
+      "source": "experiments/E00_BASELINE_ACC_20261031_055409/accuracy/summary.json"
+    },
+    {
+      "path": "auto_tuner/trials.json",
+      "bytes": 2913,
+      "sha256": "69813f231b228ca6a52da8574f9187ac895786f6e0b687f75895514cc7687c88",
+      "source": "experiments/auto_tuner/trials.json"
+    },
+    {
+      "path": "auto_tuner/report.md",
+      "bytes": 972,
+      "sha256": "e4b24d0e05ea75191ed8c1c8d3e64af87dd0d7c207e469d2e20278d017eb6583",
+      "source": "experiments/auto_tuner/report.md"
+    },
+    {
+      "path": "reports/实验报告.md",
+      "bytes": 2382,
+      "sha256": "5b5058a498410117711fdc7bb41df8e8ae4b4d89dd71f888c9627e43a055970b",
+      "source": "docs/实验报告.md"
+    }
+  ],
+  "count": 16
 }

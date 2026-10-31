@@ -1,0 +1,93 @@
+{
+  "updated_at": "2026-10-31T11:52:12+00:00",
+  "scoring": {
+    "alpha_throughput": 0.45,
+    "beta_latency": 0.35,
+    "gamma_quality": 0.15,
+    "delta_memory": 0.05,
+    "quality_threshold": 0.7,
+    "latency_metric": "e2e_p95"
+  },
+  "trials": [
+    {
+      "candidate": "ctx16384_seq8",
+      "dimension": "context",
+      "overrides": {
+        "max_model_len": 16384,
+        "max_num_seqs": 8
+      },
+      "status": "完成",
+      "valid": true,
+      "reasons": [
+        "未测 IFBench 质量，分数不含 γ 项，不得作为最终最优配置"
+      ],
+      "output_dir": "/root/qwen-lab/experiments/AUTOTUNER_ctx16384_seq8_104748_20261031_104748",
+      "output_throughput": 84.95334673629243,
+      "request_throughput": 0.16592450534432115,
+      "ttft_p95_ms": 24878.111488500002,
+      "tpot_p95_ms": 78.46853743180039,
+      "e2e_p95_ms": 64031.324451099994,
+      "best_concurrency": 8,
+      "vram_peak_gib": 42.07,
+      "quality": null,
+      "score": 0.417252,
+      "started_at": "2026-10-31T10:42:47+00:00",
+      "ended_at": "2026-10-31T11:09:27+00:00",
+      "duration_seconds": 1299.0
+    },
+    {
+      "candidate": "ctx16384_seq16",
+      "dimension": "context",
+      "overrides": {
+        "max_model_len": 16384,
+        "max_num_seqs": 16
+      },
+      "status": "完成",
+      "valid": true,
+      "reasons": [
+        "未测 IFBench 质量，分数不含 γ 项，不得作为最终最优配置"
+      ],
+      "output_dir": "/root/qwen-lab/experiments/AUTOTUNER_ctx16384_seq16_111238_20261031_111238",
+      "output_throughput": 84.86246653281859,
+      "request_throughput": 0.1657470049469113,
+      "ttft_p95_ms": 24923.782868,
+      "tpot_p95_ms": 78.51916751898237,
+      "e2e_p95_ms": 64124.53457525,
+      "best_concurrency": 8,
+      "vram_peak_gib": 42.09,
+      "quality": null,
+      "score": 0.416274,
+      "started_at": "2026-10-31T11:09:27+00:00",
+      "ended_at": "2026-10-31T11:34:18+00:00",
+      "duration_seconds": 1299.5
+    },
+    {
+      "candidate": "mtp_on",
+      "dimension": "mtp",
+      "overrides": {
+        "speculative_config": {
+          "method": "mtp",
+          "num_speculative_tokens": 3
+        }
+      },
+      "status": "完成",
+      "valid": true,
+      "reasons": [
+        "未测 IFBench 质量，分数不含 γ 项，不得作为最终最优配置"
+      ],
+      "output_dir": "/root/qwen-lab/experiments/AUTOTUNER_mtp_on_113802_20261031_113802",
+      "output_throughput": 91.78755741725836,
+      "request_throughput": 0.17927257308058273,
+      "ttft_p95_ms": 11505.274673250002,
+      "tpot_p95_ms": 47.42167015645793,
+      "e2e_p95_ms": 32113.969804649998,
+      "best_concurrency": 4,
+      "vram_peak_gib": 42.28,
+      "quality": null,
+      "score": 0.624718,
+      "started_at": "2026-10-31T11:34:18+00:00",
+      "ended_at": "2026-10-31T11:52:12+00:00",
+      "duration_seconds": 850.5
+    }
+  ]
+}
