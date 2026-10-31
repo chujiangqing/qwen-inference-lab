@@ -9,3 +9,5 @@ audit/_tmp/
 data/*.db
 experiments/
 *.tgz
+.DEFAULT
+D?Users*\n*known_hosts*\n
