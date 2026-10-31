@@ -94,10 +94,41 @@ def stats() -> None:
 
 
 # --------------------------------------------------------- synthetic AIPerf export
+def _pct_linear(values: list[float], q: float) -> float:
+    """独立实现的"线性插值"分位（不调用被测函数）。"""
+    ordered = sorted(values)
+    if len(ordered) == 1:
+        return ordered[0]
+    position = (len(ordered) - 1) * q / 100.0
+    low = int(position)
+    high = min(low + 1, len(ordered) - 1)
+    return ordered[low] + (ordered[high] - ordered[low]) * (position - low)
+
+
+def _pct_nearest_rank(values: list[float], q: float) -> float:
+    """另一种常见实现：nearest-rank（AIPerf 若改用这种，导出值会与 runner 不一致）。"""
+    ordered = sorted(values)
+    import math
+    rank = max(1, math.ceil(q / 100.0 * len(ordered)))
+    return ordered[min(rank, len(ordered)) - 1]
+
+
+def independent_percentile_agrees() -> None:
+    """两套独立实现互相校验：一致说明我们对"线性插值"的理解没有跑偏。"""
+    values = [float(x) for x in range(1, 25)]
+    for q in (50, 90, 95, 99):
+        a = runner.percentile(values, q)
+        b = _pct_linear(values, q)
+        check(f"独立实现与 runner 分位一致 q={q}", abs(a - b) < 1e-9, f"{a} vs {b}")
+    diff = abs(_pct_nearest_rank(values, 95) - _pct_linear(values, 95))
+    check("nearest-rank 与线性插值确有差异（说明该风险真实存在）", diff > 1e-6, f"差值 {diff:.4f}")
+
+
 def make_perf(folder: Path, *, n: int = 12, conc: int = 1, isl: int = 8192, osl: int = 512,
               unit: str = "ms", warmups: int = 8, complete: bool = True,
               tamper_p95: bool = False, scalar_shape: bool = True, warm_len_wrong: bool = False,
-              drop_records: int = 0, error_requests: int = 0) -> None:
+              drop_records: int = 0, error_requests: int = 0,
+              native_percentile: str = "linear") -> None:
     folder.mkdir(parents=True, exist_ok=True)
     recs, ttfts, itls, lats = [], [], [], []
     for i in range(n):
@@ -141,8 +172,9 @@ def make_perf(folder: Path, *, n: int = 12, conc: int = 1, isl: int = 8192, osl:
         for tag, vals in (("time_to_first_token", ttfts), ("inter_token_latency", itls),
                           ("request_latency", lats)):
             native[tag] = {"avg": sum(vals) / len(vals)}
+            percentile_fn = _pct_nearest_rank if native_percentile == "nearest" else _pct_linear
             for q, key in ((50, "p50"), (95, "p95"), (99, "p99")):
-                native[tag][key] = runner.percentile(vals, q)
+                native[tag][key] = percentile_fn(vals, q)
         if tamper_p95:
             native["time_to_first_token"]["p95"] *= 1.10
     (folder / "profile_export_aiperf.json").write_text(json.dumps(native), encoding="utf-8")
@@ -169,6 +201,9 @@ def perf_suite() -> None:
     perf_case("clean 12/8192/512 -> 完整", "完整")
     perf_case("one profiling record missing -> 异常", "异常", "期望 12", drop_records=1)
     perf_case("native P95 tampered -> 异常", "异常", "p95 与原生汇总不一致", tamper_p95=True)
+    perf_case("native 用独立线性插值实现 -> 完整", "完整", native_percentile="linear")
+    perf_case("native 改用 nearest-rank -> 异常（分位算法不同必须报错）",
+              "异常", "不一致", native_percentile="nearest")
     perf_case("TTFT unit seconds -> 异常", "异常", "单位不是 ms", unit="s")
     perf_case("ISL 8191 strict -> 异常", "异常", "8192/512", isl=8191)
     perf_case("OSL 511 -> 异常", "异常", "8192/512", osl=511)
@@ -319,13 +354,16 @@ def report_render() -> None:
         text = (tmp / "report.md").read_text(encoding="utf-8")
         checks = {
             "has performance table row": "| 1 | 完整 |" in text,
-            "TTFT converted ms->s": "| 3." in text or "| 4." in text,
+            "TTFT converted ms->s": f"| {perf['metrics']['time_to_first_token']['p50'] / 1000:.2f}" in text,
             "TPOT stays ms": "TPOT（毫秒/token）" in text,
             "primary metric highlighted": "prompt_level_strict" in text and "0.76" in text,
             "no unexplained exception section": "## 异常与证据" in text,
         }
         for label, ok in checks.items():
             check("render_report: " + label, ok)
+        expected_ttft_s = perf["metrics"]["time_to_first_token"]["p50"] / 1000
+        check("render_report: TTFT 秒值精确匹配 p50/1000",
+              f"| {expected_ttft_s:.2f}" in text, f"期望 {expected_ttft_s:.2f}")
         check("render_report: clean run has no issue bullets",
               "未发现完整性异常" in text)
     finally:
@@ -340,25 +378,26 @@ def redaction() -> None:
 
 
 def doc_arithmetic() -> None:
-    """Recompute every derived column of the supplied benchmark document."""
-    rows = [(1, 12, 234.32, 3.481, 31.441, 19.527, 0.05121, 26.22),
-            (2, 24, 286.01, 5.023, 37.909, 23.826, 0.08391, 42.96),
-            (3, 24, 220.13, 7.499, 44.974, 28.865, 0.10902, 55.82),
-            (4, 32, 249.08, 9.395, 51.992, 34.914, 0.12847, 65.78),
-            (8, 24, 186.76, 41.822, 53.106, 67.417, 0.12850, 65.79),
-            (2, 100, 1191.12, 4.608, 37.905, 23.818, 0.08395, 42.98)]
+    """校验「外部参考文档」对照表的算术自洽性（不是校验抄写是否正确）。
+
+    数据放在 audit/reference_doc.json：文档更新时只改数据文件，不必改测试代码；
+    来源与"非本项目实测"的声明也写在文件里，避免被当成我们的成绩引用。
+    """
+    reference = Path(__file__).resolve().parent / "reference_doc.json"
+    payload = json.loads(reference.read_text(encoding="utf-8"))
+    rows = [tuple(row) for row in payload["rows"]]
     worst = 0.0
     for conc, n, dur, ttft, tpot, e2e, rps, tps in rows:
         rps_err = abs(n / dur - rps) / rps
         tps_err = abs(n * 512 / dur - tps) / tps
         worst = max(worst, rps_err, tps_err)
-    check("document derived columns are self-consistent (<0.1%)", worst < 1e-3, f"max rel err {worst:.2e}")
+    check("参考文档：吞吐列与 请求数/时长 自洽（<0.1%）", worst < 1e-3, f"max rel err {worst:.2e}")
     # P95s are not additive: only check approximate coherence of the reported cells.
     coherent = all(ttft < e2e and 0.85 <= (ttft + tpot * 0.001 * 511) / e2e <= 1.15
                    for _, _, _, ttft, tpot, e2e, _, _ in rows)
-    check("TTFT + TPOT*(OSL-1) is within 15% of end-to-end for every row", coherent)
+    check("参考文档：TTFT + TPOT×(OSL−1) 与端到端时长相差 <15%", coherent)
     counts = [r[1] for r in rows[:5]]
-    check("note: per-level request counts are NOT uniform (12/24/24/32/24)", len(set(counts)) > 1, counts)
+    check("参考文档：各档请求数并不相同（12/24/24/32/24，P95 不可跨档比较）", len(set(counts)) > 1, counts)
     c4, c8 = rows[3], rows[4]
     check("concurrency 8 gives no throughput gain over 4 (+0.02%)",
           abs(c8[7] / c4[7] - 1) < 0.001, f"{c8[7] / c4[7]:.5f}")
@@ -384,6 +423,7 @@ def doc_arithmetic() -> None:
 def main() -> int:
     print(f"auditing {SRC}\n")
     urls(); stats(); perf_suite(); perf_schema_probe(); accuracy_suite(); cli(); report_render(); redaction()
+    independent_percentile_agrees()
     doc_arithmetic()
     total = len(RESULTS)
     failed = [r for r in RESULTS if not r["pass"]]

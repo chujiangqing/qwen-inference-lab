@@ -1,8 +1,4 @@
-"""页面 1：答辩主页面 —— 一页看懂「选型 → 瓶颈 → 优化 → 质量」。
-
-设计原则：所有结论都在第一屏，其余页面只作为下钻细节。
-顺序刻意对齐评分表：选型(10) → 优化(40) → 结果评估(25) → 工程(10)。
-"""
+"""总览：一屏看清当前状态、最优配置与瓶颈。"""
 from __future__ import annotations
 
 import sys
@@ -17,11 +13,11 @@ sys.path.insert(0, str(FRONTEND / "components"))
 
 import gpu_cards  # noqa: E402
 import tables  # noqa: E402
+import theme  # noqa: E402
 from api_client import call  # noqa: E402
 
-st.header("Qwen3.8-27B 单卡推理优化 — 一页看懂")
+theme.setup("运行总览", "单卡 RTX 4090 · Qwen3.8-27B · FP8 权重 + FP8 KV Cache")
 
-# ============================================================ 1. 结论
 experiments = call("/api/experiments?limit=50")
 rows = (experiments or {}).get("experiments", []) if isinstance(experiments, dict) else []
 baseline = None
@@ -29,56 +25,40 @@ for row in rows:
     if "BASELINE" in str(row.get("experiment_name", "")).upper() and row.get("best_output_throughput"):
         if baseline is None or row["best_output_throughput"] > baseline["best_output_throughput"]:
             baseline = row
-
 trials_payload = call("/api/analysis/trials")
 trials = (trials_payload or {}).get("trials", []) if isinstance(trials_payload, dict) else []
 ranked = (trials_payload or {}).get("ranked", []) if isinstance(trials_payload, dict) else []
 accuracy_rows = [row for row in rows if row.get("prompt_level_strict") is not None]
 
-st.subheader("① 结论")
-if ranked:
-    best = ranked[0]
-    base_tps = (baseline or {}).get("best_output_throughput")
-    delta = (best["output_throughput"] / base_tps - 1) * 100 if base_tps and best.get("output_throughput") else None
-    line = f"推荐 **{best['candidate']}**：{best.get('output_throughput'):.1f} tok/s"
-    if delta is not None:
-        line += f"（相对基线 {delta:+.1f}%）"
-    if accuracy_rows:
-        line += f"；质量 IFBench {accuracy_rows[0]['prompt_level_strict'] * 100:.1f}%"
-    st.success(line)
-else:
-    st.info("参数搜索尚未产出结果；当前已有基线数据，候选实验排队中。")
+with theme.card():
+    if ranked:
+        best = ranked[0]
+        base_tps = (baseline or {}).get("best_output_throughput")
+        delta = (best["output_throughput"] / base_tps - 1) * 100 if base_tps and best.get("output_throughput") else None
+        headline = f"{best['candidate']} · {best.get('output_throughput'):.1f} tok/s"
+        if delta is not None:
+            headline += f"（{delta:+.1f}% vs 基线）"
+        st.markdown(f"### 当前最优：{headline}")
+        theme.metrics([
+            ("输出吞吐", f"{best.get('output_throughput'):.1f} tok/s" if best.get("output_throughput") else "—"),
+            ("TTFT P95", f"{best.get('ttft_p95_ms'):.0f} ms" if best.get("ttft_p95_ms") else "—"),
+            ("峰值显存", f"{best.get('vram_peak_gib')} GiB" if best.get("vram_peak_gib") else "—"),
+            ("候选/有效", f"{len(trials)} / {len(ranked)}"),
+        ])
+    elif baseline:
+        st.markdown(f"### 基线已就绪：{baseline['experiment_name']}")
+        theme.metrics([
+            ("最高输出吞吐", f"{baseline['best_output_throughput']:.1f} tok/s"),
+            ("评测口径", "100 请求/档 × 4 档"),
+            ("精度", f"{accuracy_rows[0]['prompt_level_strict'] * 100:.1f}%" if accuracy_rows else "进行中"),
+            ("候选/有效", f"{len(trials)} / {len(ranked)}"),
+        ])
+        st.caption("参数对照实验正在排队执行，完成后这里会显示最优配置与提升幅度。")
 
-columns = st.columns(4)
-columns[0].metric("基线吞吐（100 请求/档）",
-                  f"{baseline['best_output_throughput']:.1f} tok/s" if baseline else "—")
-columns[1].metric("候选数 / 有效数", f"{len(trials)} / {len(ranked)}")
-columns[2].metric("IFBench",
-                  f"{accuracy_rows[0]['prompt_level_strict'] * 100:.1f}%" if accuracy_rows else "—")
-columns[3].metric("模型 / 量化", "FP8 权重 + FP8 KV")
-
-# ============================================================ 2. 瓶颈
-st.subheader("② 瓶颈在哪（先算再做）")
-bottleneck = call(f"/api/analysis/bottleneck?experiment_id={baseline['id']}") if baseline else {}
-if isinstance(bottleneck, dict) and bottleneck.get("rows"):
-    frame = pd.DataFrame(bottleneck["rows"])
-    keep = [column for column in ("concurrency", "output_throughput", "tpot_p95",
-                                  "read_gbs", "bandwidth_pct") if column in frame.columns]
-    view = frame[keep].copy()
-    view.columns = ["并发", "输出吞吐 tok/s", "TPOT P95 ms", "权重读取 GB/s", "占峰值带宽 %"][:len(keep)]
-    st.dataframe(view, use_container_width=True, hide_index=True)
-    st.caption(f"权重 {bottleneck.get('weights_gib')} GiB（稠密，每 token 需全量读一遍）；"
-               f"4090 标称带宽 {bottleneck.get('peak_bandwidth_gbs')} GB/s。"
-               "并发 1 已达带宽上限 → 单请求无法更快；并发 8 与 4 吞吐相同是服务端 max_num_seqs=4 封顶，不是硬件饱和。")
-else:
-    st.info("还没有可核算的性能数据")
-
-# ============================================================ 3. 优化对比
-st.subheader("③ 优化前后对比")
 final_rows = [row for row in rows if str(row.get("experiment_name", "")).startswith("FINAL_")]
 if baseline and final_rows:
-    base_id, cand_id = baseline["id"], final_rows[0]["id"]
-    data = call(f"/api/experiments/compare?baseline={base_id}&candidate={cand_id}")
+    st.markdown("### 优化前后对比")
+    data = call(f"/api/experiments/compare?baseline={baseline['id']}&candidate={final_rows[0]['id']}")
     if isinstance(data, dict) and data.get("rows"):
         st.success(data.get("conclusion", "已生成对比"))
         frame = pd.DataFrame(data["rows"])
@@ -86,48 +66,51 @@ if baseline and final_rows:
                                       "output_throughput_delta_pct", "ttft_p95_base", "ttft_p95_new",
                                       "ttft_p95_delta_pct") if column in frame.columns]
         view = frame[keep].copy()
-        view.columns = ["并发", "吞吐-基线", "吞吐-优化", "吞吐变化%",
-                        "TTFT-基线", "TTFT-优化", "TTFT变化%"][:len(keep)]
+        view.columns = ["并发", "吞吐·基线", "吞吐·优化", "吞吐变化", "TTFT·基线", "TTFT·优化", "TTFT 变化"][:len(keep)]
         st.dataframe(view, use_container_width=True, hide_index=True)
         st.bar_chart(frame.set_index("concurrency")[["output_throughput_base", "output_throughput_new"]])
-    else:
-        st.warning(f"对比失败：{data}")
-elif ranked:
-    st.info("候选已产出，但还没有 100 请求/档的同口径复测结果（FINAL_*），暂不与基线并排。")
-else:
-    st.info("等待候选实验结果。")
 
-# ============================================================ 4. 质量
-st.subheader("④ 质量代价")
-if accuracy_rows:
-    summary = call(f"/api/analysis/accuracy?experiment_id={accuracy_rows[0]['id']}")
-    if isinstance(summary, dict) and "prompt_level_strict" in summary:
-        ci = summary.get("ci") or {}
-        left, middle, right, fourth = st.columns(4)
-        left.metric("prompt_level_strict", f"{summary['prompt_level_strict'] * 100:.1f}%")
-        middle.metric("样本数", summary.get("sample_count") or "—")
-        right.metric("标准误", f"± {ci.get('stderr_pp', '—')} pp")
-        fourth.metric("95% CI", f"{ci.get('ci95_pp', ['—', '—'])[0]}–{ci.get('ci95_pp', ['—', '—'])[1]}%")
-        lengths = summary.get("lengths") or {}
-        if lengths:
-            st.caption(f"输出长度 中位 {lengths.get('median'):,} 字符 / 最长 {lengths.get('max'):,} 字符；"
-                       f"接近 32768 token 上限的样本 {summary.get('near_truncation')} 条"
-                       "（这是单条样本耗时数分钟的原因）。")
-        st.caption("判读：差异小于 1 个标准误（约 4pp）不能作为结论。")
-else:
-    st.info("精度评测尚未完成入库")
+if isinstance(baseline, dict):
+    report = call(f"/api/analysis/bottleneck?experiment_id={baseline['id']}")
+    if isinstance(report, dict) and report.get("rows"):
+        st.markdown("### 瓶颈定位")
+        frame = pd.DataFrame(report["rows"])
+        keep = [column for column in ("concurrency", "output_throughput", "tpot_p95",
+                                      "read_gbs", "bandwidth_pct") if column in frame.columns]
+        view = frame[keep].copy()
+        view.columns = ["并发", "输出吞吐 tok/s", "TPOT P95 ms", "权重读取 GB/s", "占峰值带宽"][:len(keep)]
+        with theme.card():
+            st.dataframe(view, use_container_width=True, hide_index=True)
+            st.caption(f"权重 {report.get('weights_gib')} GiB，每生成 1 个 token 需全量读取一遍；"
+                       f"显存带宽峰值 {report.get('peak_bandwidth_gbs')} GB/s。"
+                       "并发 1 已接近带宽上限，说明单请求速度由带宽决定，加并发只能摊薄权重读取。")
 
-# ============================================================ 5. 环境
-st.subheader("⑤ 运行环境")
+kv = call("/api/analysis/kv-cache")
+if isinstance(kv, dict) and kv.get("kv_capacity_tokens"):
+    st.markdown("### 显存与 KV Cache")
+    with theme.card():
+        theme.metrics([
+            ("可用 KV 显存", f"{kv.get('available_kv_gib')} GiB"),
+            ("KV 容量", f"{kv.get('kv_capacity_tokens'):,} token"),
+            ("单请求上限", f"{kv.get('per_request_tokens'):,} token"),
+            ("可容纳并发", f"{kv.get('max_concurrency')}×"),
+        ])
+        queue = kv.get("queue") or {}
+        usage = kv.get("usage_percent") or {}
+        st.caption(f"KV 占用 平均 {usage.get('avg')}% / 峰值 {usage.get('max')}%；"
+                   f"最大并行 {queue.get('max_running')}、最大排队 {queue.get('max_waiting')}；"
+                   f"抢占 {kv.get('preemption_events')} 次。")
+
+st.markdown("### 运行环境")
 hardware = call("/api/hardware")
 if isinstance(hardware, dict) and "error" not in hardware:
     gpu_cards.render(hardware)
 status = call("/api/runtime/status")
 service = (status or {}).get("service", {}) if isinstance(status, dict) else {}
 if service.get("ready"):
-    st.success(f"模型服务在线：{service.get('models')}，max_model_len={service.get('max_model_len')}")
+    st.success(f"推理服务在线 · {', '.join(service.get('models') or [])} · max_model_len={service.get('max_model_len')}")
 else:
-    st.error(f"模型服务未就绪：{service.get('error', '—')}")
+    st.warning(f"推理服务未就绪：{service.get('error', '—')}")
 
 with st.expander("最近实验"):
     tables.experiments_table(rows[:10])

@@ -1,0 +1,157 @@
+[
+  {
+    "id": "LC-01",
+    "category": "long_context",
+    "prompt": "阅读以下运维记录并回答问题。\n\n【记录】2026 年 10 月，集群 A 的推理服务在 03:17 出现 OOM，根因是 KV Cache 预分配过大；值班工程师李衡将 gpu-memory-utilization 从 0.95 下调到 0.90，并把 max-num-seqs 从 16 降到 8，服务在 03:42 恢复。10 月 9 日，集群 B 的网卡丢包率达到 0.7%，运维组张岚更换光模块后恢复。10 月 14 日，集群 A 的磁盘使用率升到 91%，清理旧日志共释放 2.4 TB。10 月 21 日，集群 C 首次上线灰度流量，占比 5%。\n\n请回答：1) 集群 A 在 03:17 的故障根因是什么？2) 谁调整了参数、把 max-num-seqs 改成了多少？3) 10 月 21 日集群 C 的灰度流量占比是多少？请分点回答，总长度不超过 200 字。",
+    "must_include": ["KV Cache", "李衡", "8", "5%"],
+    "max_chars": 260
+  },
+  {
+    "id": "LC-02",
+    "category": "long_context",
+    "prompt": "阅读以下产品说明并回答问题。\n\n【说明】某推理网关有三个限流层：第一层按 API Key 限流，默认 60 次/分钟；第二层按租户限流，默认 600 次/分钟；第三层按全局限流，默认 3000 次/分钟。超限时返回 429 状态码，并在响应头 X-Retry-After 中给出建议重试秒数，默认 2 秒。网关支持白名单，白名单内的 Key 不受第一层限制，但仍受第二层与第三层限制。\n\n请回答：1) 三层限流各自的默认阈值是多少？2) 超限返回什么状态码、重试建议放在哪个响应头？3) 白名单能绕过哪一层限制、不能绕过哪几层？总长度不超过 200 字。",
+    "must_include": ["60", "600", "3000", "429", "X-Retry-After", "第二层"],
+    "max_chars": 260
+  },
+  {
+    "id": "LC-03",
+    "category": "long_context",
+    "prompt": "阅读以下实验记录并回答问题。\n\n【记录】实验 E17 使用单张 4090 显卡，显存 48 GiB。基线配置 max-model-len=32768、max-num-seqs=4，实测输出吞吐 66.19 token/s。实验 E18 把 max-num-seqs 提到 8，吞吐 66.26 token/s，TTFT P95 从 6141 毫秒升到 36374 毫秒。实验 E19 把 max-model-len 降到 16384 后，显存余量增加 5.8 GiB。实验 E20 开启投机解码，接受率 0.62。\n\n请回答：1) E18 相比基线的吞吐变化是多少？2) E18 的 TTFT P95 变成了多少毫秒？3) E19 把 max-model-len 降到了多少、显存余量增加多少？总长度不超过 220 字。",
+    "must_include": ["66.26", "36374", "16384", "5.8"],
+    "max_chars": 280
+  },
+  {
+    "id": "LC-04",
+    "category": "long_context",
+    "prompt": "阅读以下安全通报并回答问题。\n\n【通报】10 月 3 日，安全团队发现某镜像仓库中 3 个镜像存在高危漏洞 CVE-2026-1188，影响组件为 libtiff 4.5.0，修复版本为 4.5.1。受影响镜像包括 analytics-worker、report-gen、pdf-render。团队要求在 10 月 10 日前完成升级，并在升级后重新扫描，扫描工具使用 Trivy，扫描报告需归档到 security 目录。期间禁止从该仓库拉取受影响镜像，改用内部镜像缓存。\n\n请回答：1) 漏洞编号、影响组件与修复版本分别是什么？2) 哪三个镜像受影响？3) 扫描工具是什么、报告要归档到哪里？总长度不超过 220 字。",
+    "must_include": ["CVE-2026-1188", "libtiff", "4.5.1", "analytics-worker", "Trivy", "security"],
+    "max_chars": 280
+  },
+  {
+    "id": "LC-05",
+    "category": "long_context",
+    "prompt": "阅读以下计费规则并回答问题。\n\n【规则】某模型 API 按 token 计费：输入 1 元/百万 token，输出 4 元/百万 token。每月前 10 万输入 token 免费，超出部分正常计费；输出不免费。缓存命中的输入 token 按 0.2 元/百万 token 计费，且不计入免费额度。单次请求输入 2000 token（其中 1500 命中缓存），输出 500 token。\n\n请回答：1) 输入与输出的单价分别是多少？2) 缓存命中的输入 token 单价是多少？3) 这次请求的输入计费 token 数按规则如何拆分（非缓存/缓存各多少）？总长度不超过 200 字。",
+    "must_include": ["1 元", "4 元", "0.2", "500", "1500"],
+    "max_chars": 260
+  },
+  {
+    "id": "LC-06",
+    "category": "long_context",
+    "prompt": "阅读以下部署说明并回答问题。\n\n【说明】服务部署在 3 个可用区：az-a、az-b、az-c。每个可用区部署 4 个副本，资源规格为 8 核 32 GiB。滚动发布策略为 maxSurge=1、maxUnavailable=0，单批次等待 30 秒。健康检查路径为 /healthz，初始延迟 20 秒，超时 3 秒，失败阈值 3 次。回滚窗口为 10 分钟。\n\n请回答：1) 总共部署了多少个副本？2) 滚动发布的 maxSurge 与 maxUnavailable 分别是多少？3) 健康检查路径、初始延迟与失败阈值分别是多少？总长度不超过 200 字。",
+    "must_include": ["12", "maxSurge=1", "maxUnavailable=0", "/healthz", "20", "3"],
+    "max_chars": 260
+  },
+  {
+    "id": "LC-07",
+    "category": "long_context",
+    "prompt": "阅读以下性能测试说明并回答问题。\n\n【说明】压测使用 4 个并发档：1、2、4、8，每档发送 100 个请求，输入长度 8192 token，输出长度 512 token，预热 8 个请求。结果文件为 summary.json，必须包含 status 字段，status 为“完整”才计入成绩。测试重复 3 轮，取中位数。首轮数据因预热不足被标记为“无效”。\n\n请回答：1) 共几个并发档、每档多少请求？2) 输入与输出长度分别是多少？3) 什么条件的数据才计入成绩、首轮为什么无效？总长度不超过 200 字。",
+    "must_include": ["4", "100", "8192", "512", "完整", "预热"],
+    "max_chars": 260
+  },
+
+  {
+    "id": "RS-01",
+    "category": "reasoning",
+    "prompt": "一个数加上 17 等于它的 3 倍减去 5。这个数是多少？请只给出最终数字。",
+    "answer": "11"
+  },
+  {
+    "id": "RS-02",
+    "category": "reasoning",
+    "prompt": "甲、乙、丙三人中只有一人说真话。甲说：乙在说谎。乙说：丙在说谎。丙说：甲和乙都在说谎。说真话的是谁？请只给出姓名。",
+    "answer": "乙"
+  },
+  {
+    "id": "RS-03",
+    "category": "reasoning",
+    "prompt": "某序列为 2, 6, 12, 20, 30, ?，请给出下一个数。只给数字。",
+    "answer": "42"
+  },
+  {
+    "id": "RS-04",
+    "category": "reasoning",
+    "prompt": "一项任务，甲单独做需 12 天，乙单独做需 18 天。两人合作，中途甲休息了 3 天，问从开始到完成共用多少天？请只给出最终天数。",
+    "answer": "9"
+  },
+  {
+    "id": "RS-05",
+    "category": "reasoning",
+    "prompt": "有三个盒子，标签分别为“苹果”“橙子”“混合”，但所有标签都贴错了。你只能从一个盒子里取出一个水果查看。应该从哪个标签的盒子里取？请只回答标签名。",
+    "answer": "混合"
+  },
+  {
+    "id": "RS-06",
+    "category": "reasoning",
+    "prompt": "一个 5 升桶和一个 3 升桶，需要量出 4 升水。最少需要几步倒水操作（每次倒水必须倒满或倒空）？请只给出步数。",
+    "answer": "6"
+  },
+  {
+    "id": "RS-07",
+    "category": "reasoning",
+    "prompt": "某班 40 人，30 人喜欢数学，25 人喜欢物理，5 人两门都不喜欢。两门都喜欢的有多少人？请只给出数字。",
+    "answer": "20"
+  },
+
+  {
+    "id": "CD-01",
+    "category": "code",
+    "prompt": "用 Python 写一个函数 `second_largest(nums)`，返回列表中第二大的**不同**数值；若不存在则返回 None。只输出代码块。",
+    "function": "second_largest",
+    "tests": [
+      "assert second_largest([3, 1, 4, 4, 2]) == 3",
+      "assert second_largest([5, 5]) is None",
+      "assert second_largest([]) is None"
+    ]
+  },
+  {
+    "id": "CD-02",
+    "category": "code",
+    "prompt": "用 Python 写一个函数 `word_count(text)`，返回字典：键为小写单词（仅字母数字，按空白与标点切分），值为出现次数。只输出代码块。",
+    "function": "word_count",
+    "tests": [
+      "assert word_count('Hello, hello world!') == {'hello': 2, 'world': 1}",
+      "assert word_count('') == {}"
+    ]
+  },
+  {
+    "id": "CD-03",
+    "category": "code",
+    "prompt": "用 Python 写一个函数 `chunk(lst, size)`，把列表按 size 切成若干子列表，最后一块可以不足；size<=0 时抛 ValueError。只输出代码块。",
+    "function": "chunk",
+    "tests": [
+      "assert chunk([1,2,3,4,5], 2) == [[1,2],[3,4],[5]]",
+      "try:\n    chunk([1], 0)\n    raise AssertionError('should raise')\nexcept ValueError:\n    pass"
+    ]
+  },
+  {
+    "id": "CD-04",
+    "category": "code",
+    "prompt": "用 Python 写一个函数 `is_balanced(s)`，判断字符串中的三种括号 ()[]{} 是否正确闭合，返回布尔值。只输出代码块。",
+    "function": "is_balanced",
+    "tests": [
+      "assert is_balanced('([]{})') is True",
+      "assert is_balanced('([)]') is False",
+      "assert is_balanced('') is True"
+    ]
+  },
+  {
+    "id": "CD-05",
+    "category": "code",
+    "prompt": "用 Python 写一个函数 `merge_intervals(intervals)`，合并所有重叠区间并按起点升序返回。输入为 [[start, end], ...]。只输出代码块。",
+    "function": "merge_intervals",
+    "tests": [
+      "assert merge_intervals([[1,3],[2,6],[8,10],[15,18]]) == [[1,6],[8,10],[15,18]]",
+      "assert merge_intervals([]) == []"
+    ]
+  },
+  {
+    "id": "CD-06",
+    "category": "code",
+    "prompt": "用 Python 写一个函数 `top_k_frequent(words, k)`，返回出现次数最多的 k 个单词；次数相同按字典序升序。只输出代码块。",
+    "function": "top_k_frequent",
+    "tests": [
+      "assert top_k_frequent(['a','b','a','c','b','a'], 2) == ['a','b']",
+      "assert top_k_frequent([], 3) == []"
+    ]
+  }
+]

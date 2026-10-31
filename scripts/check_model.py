@@ -31,8 +31,26 @@ def load_config(path: Path) -> dict:
     return json.loads((path / "config.json").read_text(encoding="utf-8-sig"))
 
 
-def weight_files(path: Path) -> list[Path]:
-    return [item for item in path.rglob("*") if item.is_file() and item.suffix in WEIGHT_SUFFIXES]
+def weight_files(path: Path) -> tuple[list[Path], list[Path]]:
+    """返回 (实际权重文件, 被排除的子目录权重文件)。
+
+    只信任 model.safetensors.index.json 登记的清单；没有 index 时只看**顶层**文件。
+    绝不用 rglob 递归：ModelScope 下载目录里常见 original/ 或半成品临时目录，
+    递归会把同一份权重算两遍，权重体积直接翻倍，进而把"装得下"误判成"装不下"。
+    """
+    nested = [item for item in path.rglob("*")
+              if item.is_file() and item.suffix in WEIGHT_SUFFIXES and item.parent != path]
+    index = path / "model.safetensors.index.json"
+    if index.is_file():
+        try:
+            names = sorted(set((json.loads(index.read_text(encoding="utf-8-sig")).get("weight_map") or {}).values()))
+            files = [path / name for name in names]
+            if files and all(item.is_file() for item in files):
+                return files, nested
+        except (OSError, ValueError, KeyError):
+            pass
+    top = sorted(item for item in path.glob("*") if item.is_file() and item.suffix in WEIGHT_SUFFIXES)
+    return top, nested
 
 
 def architecture(config: dict) -> dict:
@@ -160,7 +178,7 @@ def main() -> int:
         return 1
     arch = architecture(config)
     payload["config_summary"] = arch
-    weights = weight_files(path)
+    weights, nested_weights = weight_files(path)
     weights_bytes = sum(item.stat().st_size for item in weights)
     weights_gib = gib(weights_bytes)
     index_file = path / "model.safetensors.index.json"
@@ -180,6 +198,11 @@ def main() -> int:
         warnings.append("未找到 safetensors/bin/gguf 权重文件")
     if not payload["tokenizer"]["usable"]:
         warnings.append("tokenizer 文件不完整：AIPerf 以模型 tokenizer 生成输入时会失败")
+    if nested_weights:
+        nested_gib = gib(sum(item.stat().st_size for item in nested_weights))
+        warnings.append(
+            f"检测到子目录内还有 {len(nested_weights)} 个权重文件（{nested_gib} GiB），"
+            "已排除、未计入体积（避免 original/ 等目录导致重复统计）")
     if weights_gib and weights_gib > args.vram_gib * args.gpu_memory_utilization:
         warnings.append(f"权重 {weights_gib} GiB 已超过可用显存 "
                         f"{round(args.vram_gib * args.gpu_memory_utilization, 2)} GiB")

@@ -13,9 +13,11 @@ sys.path.insert(0, str(FRONTEND / "components"))
 
 import charts  # noqa: E402
 import tables  # noqa: E402
+import theme  # noqa: E402
 from api_client import call  # noqa: E402
 
-st.header("性能评测")
+theme.setup("性能与对比", "四档并发 · 基线 vs 优化并排对比 · 候选排行 · 瓶颈核算")
+
 
 experiments = call("/api/experiments?limit=50")
 rows = (experiments or {}).get("experiments", []) if isinstance(experiments, dict) else []

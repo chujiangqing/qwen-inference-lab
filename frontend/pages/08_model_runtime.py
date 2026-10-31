@@ -10,9 +10,12 @@ FRONTEND = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(FRONTEND))
 sys.path.insert(0, str(FRONTEND / "components"))
 
+import theme  # noqa: E402
 from api_client import call  # noqa: E402
 
-st.header("模型运行管理")
+theme.setup("模型服务", "启动 / 停止 / 切换 profile / 查看日志")
+
+
 status = call("/api/runtime/status")
 service = (status or {}).get("service", {})
 profiles = (status or {}).get("profiles", {})

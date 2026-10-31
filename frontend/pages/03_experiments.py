@@ -12,10 +12,13 @@ sys.path.insert(0, str(FRONTEND))
 sys.path.insert(0, str(FRONTEND / "components"))
 
 import tables  # noqa: E402
+import theme  # noqa: E402
 from api_client import call  # noqa: E402
 
-st.header("实验管理")
-st.caption("评测口径由官方 eval/run.sh 决定；这里只传参数，不改口径。")
+theme.setup("实验管理", "发起评测、跟踪进度、查看历史（评测口径由官方脚本决定，这里只传参数）")
+
+
+
 
 with st.form("run_form"):
     left, right = st.columns(2)

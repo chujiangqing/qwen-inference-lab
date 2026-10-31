@@ -10,9 +10,11 @@ FRONTEND = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(FRONTEND))
 sys.path.insert(0, str(FRONTEND / "components"))
 
+import theme  # noqa: E402
 from api_client import call  # noqa: E402
 
-st.header("实验报告")
+theme.setup("实验报告", "Markdown 报告与 CSV 导出")
+
 experiments = call("/api/experiments?limit=50")
 rows = (experiments or {}).get("experiments", []) if isinstance(experiments, dict) else []
 if not rows:

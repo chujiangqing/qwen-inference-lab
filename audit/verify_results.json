@@ -1,6 +1,6 @@
 {
   "source": "D:\\Users\\cuijiaqi\\Documents\\deepseek-harness\\default-workspace\\Qwen-Inference-Lab\\eval\\runner.py",
-  "total": 76,
+  "total": 84,
   "failed": [],
   "results": [
     {
@@ -112,6 +112,16 @@
       "check": "parse_performance: native P95 tampered -> 异常",
       "pass": true,
       "detail": "异常 ['time_to_first_token p95 与原生汇总不一致']"
+    },
+    {
+      "check": "parse_performance: native 用独立线性插值实现 -> 完整",
+      "pass": true,
+      "detail": "完整 []"
+    },
+    {
+      "check": "parse_performance: native 改用 nearest-rank -> 异常（分位算法不同必须报错）",
+      "pass": true,
+      "detail": "异常 ['time_to_first_token p50 与原生汇总不一致', 'time_to_first_token p95 与原生汇总不一致', 'time_to_first_token p99 与原生汇总不一致', 'inter_token_latency p50 与原生汇总不一致', 'inter_token_latency p95 与原生汇总不一致', 'inter_token_latency p99 与原生汇总不一致', 'request_latency p50 与原生汇总不一致', 'request_latency p95 与原生汇总不一致', 'request_latency p99 与原生汇总不一致']"
     },
     {
       "check": "parse_performance: TTFT unit seconds -> 异常",
@@ -323,6 +333,11 @@
       "detail": ""
     },
     {
+      "check": "render_report: TTFT 秒值精确匹配 p50/1000",
+      "pass": true,
+      "detail": "期望 3.52"
+    },
+    {
       "check": "render_report: clean run has no issue bullets",
       "pass": true,
       "detail": ""
@@ -338,17 +353,42 @@
       "detail": ""
     },
     {
-      "check": "document derived columns are self-consistent (<0.1%)",
+      "check": "独立实现与 runner 分位一致 q=50",
+      "pass": true,
+      "detail": "12.5 vs 12.5"
+    },
+    {
+      "check": "独立实现与 runner 分位一致 q=90",
+      "pass": true,
+      "detail": "21.7 vs 21.7"
+    },
+    {
+      "check": "独立实现与 runner 分位一致 q=95",
+      "pass": true,
+      "detail": "22.85 vs 22.85"
+    },
+    {
+      "check": "独立实现与 runner 分位一致 q=99",
+      "pass": true,
+      "detail": "23.77 vs 23.77"
+    },
+    {
+      "check": "nearest-rank 与线性插值确有差异（说明该风险真实存在）",
+      "pass": true,
+      "detail": "差值 0.1500"
+    },
+    {
+      "check": "参考文档：吞吐列与 请求数/时长 自洽（<0.1%）",
       "pass": true,
       "detail": "max rel err 1.11e-04"
     },
     {
-      "check": "TTFT + TPOT*(OSL-1) is within 15% of end-to-end for every row",
+      "check": "参考文档：TTFT + TPOT×(OSL−1) 与端到端时长相差 <15%",
       "pass": true,
       "detail": ""
     },
     {
-      "check": "note: per-level request counts are NOT uniform (12/24/24/32/24)",
+      "check": "参考文档：各档请求数并不相同（12/24/24/32/24，P95 不可跨档比较）",
       "pass": true,
       "detail": [
         12,

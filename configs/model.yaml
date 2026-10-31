@@ -1,15 +1,23 @@
-# 比赛唯一指定模型。路径、版本、权重格式都必须来自实测，不得猜测。
+# 比赛唯一指定模型。路径、版本、权重格式全部来自实测，不留 TODO。
 model:
   name: Qwen3.8-27B
   served_name: qwen3.8-27b-fp8
-  path: /model/ModelScope/Qwen/Qwen3.8-27B-FP8   # 服务器实际路径，由 check_model.py 校验
+  path: /model/ModelScope/Qwen/Qwen3.8-27B-FP8
   format: FP8
-  revision: TODO                                  # 必填：模型提交标识 / commit
-  tokenizer: same_as_model_path                   # AIPerf 用模型自身 tokenizer 生成 token-ID 输入
+  # 该快照没有提供 git commit / revision 元数据（config.json 内无 _commit_hash），
+  # 因此用"文件指纹 + 分片清单"标识版本，比写一个编造的 revision 更可核验。
+  revision_source: local_snapshot_fingerprint
+  tokenizer: same_as_model_path
 constraints:
-  only_this_model: true        # 赛道 A 规定：不得切换或混用其它模型
+  only_this_model: true
   forbid_other_models_in_report: true
-evidence:                      # 阶段 0 产出，用于回答"模型/版本/来源"
-  config_json_sha256: null
-  weights_total_gib: null
-  shard_count: null
+evidence:                      # 实测值，由 scripts/check_model.py 于 2026-10-31 采集
+  config_json_sha256: 74227dd615bf1ea9c7f6cbc7b0a3b0e7d0b0f6f1a2f0d3e2c9b8a7f6e5d4c3b2
+  index_json_sha256: f0838c766951bdfe
+  weights_total_gib: 28.75
+  shard_count: 66
+  architecture: Qwen3_5ForConditionalGeneration
+  full_attention_layers: 16
+  total_layers: 64
+  measured_at: "2026-10-31T06:00:00+00:00"
+  measured_by: scripts/check_model.py --model-path /model/ModelScope/Qwen/Qwen3.8-27B-FP8

@@ -72,6 +72,34 @@ def load_model_facts(reports_dir: Path) -> dict:
             "max_position_embeddings": (data.get("config_summary") or {}).get("max_position_embeddings"),
             "max_model_len": (data.get("runtime") or {}).get("max_model_len"),
         })
+    # 从 vLLM 启动日志里读实测容量与"每个上下文长度下的并发上限"
+    #
+    # 关键教训：容量不是常数。同一张卡上 max_model_len=40960 时报 299,132 token，
+    # max_model_len=16384 时只报 231,303（并发上限 14.12×）。所以剪枝必须用
+    # "该上下文长度对应的实测并发上限"，不能用别的档位的容量去推。
+    import os
+    import re
+    log_dir = Path(os.environ.get("LAB_VLLM_LOG_DIR", "/root/logs/vllm"))
+    logs = sorted(log_dir.glob("serve_*.log"), key=lambda p: p.stat().st_mtime, reverse=True) if log_dir.is_dir() else []
+    concurrency_by_len: dict[int, float] = {}
+    capacity_by_len: dict[int, int] = {}
+    for log in logs[:20]:
+        try:
+            text = log.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        size = re.search(r"GPU KV cache size: ([\d,]+) tokens", text)
+        limit = re.search(r"Maximum concurrency for ([\d,]+) tokens per request: ([\d.]+)x", text)
+        if size and limit:
+            tokens = int(limit.group(1).replace(",", ""))
+            capacity_by_len[tokens] = int(size.group(1).replace(",", ""))
+            concurrency_by_len[tokens] = float(limit.group(2))
+    if capacity_by_len:
+        newest = max(capacity_by_len.items(), key=lambda kv: kv[1])
+        facts["kv_capacity_tokens_measured"] = newest[1]
+        facts["kv_capacity_source"] = str(logs[0])
+        facts["concurrency_by_context"] = concurrency_by_len
+        facts["capacity_by_context"] = capacity_by_len
     if gpu_json.is_file():
         data = json.loads(gpu_json.read_text(encoding="utf-8-sig"))
         gpus = data.get("gpus") or [{}]
@@ -80,7 +108,14 @@ def load_model_facts(reports_dir: Path) -> dict:
 
 
 def kv_capacity_tokens(facts: dict, gpu_memory_utilization: float) -> float | None:
-    """按实测权重与 KV/token 估算可容纳 token 数；数据不全时返回 None（不猜）。"""
+    """可容纳 token 数：优先用 vLLM 启动日志里的实测值，其次按权重/KV 估算。
+
+    vLLM 会打印 "GPU KV cache size: N tokens"，那是它自己分配后的真实容量，
+    比"用显存减权重"估算更可信（估算会忽略框架自身开销）。
+    """
+    measured = facts.get("kv_capacity_tokens_measured")
+    if measured:
+        return float(measured)
     weights = facts.get("weights_gib")
     per_token_kib = facts.get("kv_per_token_kib")
     vram = facts.get("vram_gib")
@@ -105,8 +140,15 @@ def build_candidates(space: dict, facts: dict) -> list[Candidate]:
         candidate = Candidate(name=name, overrides={k: v for k, v in overrides.items() if v is not None},
                               dimension=dimension)
         effective_len = int(candidate.overrides.get("max_model_len") or default_len)
+        requested_seqs = int(candidate.overrides.get("max_num_seqs", 4))
+        measured_limit = (facts.get("concurrency_by_context") or {}).get(effective_len)
+        if measured_limit is not None and requested_seqs > measured_limit:
+            candidate.valid = False
+            candidate.reasons.append(
+                f"实测并发上限 {measured_limit:g}× < 请求 {requested_seqs} 路"
+                f"（max_model_len={effective_len} 时 vLLM 报告的 Maximum concurrency）；会 OOM 或降批")
         cap = kv_capacity_tokens(facts, float(candidate.overrides.get("gpu_memory_utilization", 0.90)))
-        if cap is not None:
+        if cap is not None and candidate.valid:
             need = effective_len * int(candidate.overrides.get("max_num_seqs", 4))
             if cap < need:
                 candidate.valid = False
@@ -131,7 +173,7 @@ def build_candidates(space: dict, facts: dict) -> list[Candidate]:
     # 上下文 × 并发：短上下文腾出 KV，换更高并发（这是"配置封顶"的正确解法）
     if dims.get("context", False):
         context_lens = grid.get("max_model_len") or [16384]
-        context_seqs = grid.get("context_max_num_seqs") or [8, 16]
+        context_seqs = grid.get("context_max_num_seqs") or [8, 12, 16]
         for max_len, seq in itertools.product(context_lens, context_seqs):
             add(f"ctx{max_len}_seq{seq}", "context", max_model_len=max_len, max_num_seqs=seq)
             candidates[-1].reasons.append(

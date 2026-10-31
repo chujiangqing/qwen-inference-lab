@@ -12,10 +12,13 @@ FRONTEND = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(FRONTEND))
 sys.path.insert(0, str(FRONTEND / "components"))
 
+import theme  # noqa: E402
 from api_client import call  # noqa: E402
 
-st.header("AutoTuner")
-st.caption("评分 S = α·吞吐 + β·延迟 + γ·质量 + δ·显存；未测质量的配置不得评为最优（需求书 8.3）。")
+theme.setup("参数搜索", "候选合法性检查与排名（单变量对照，串行独占 GPU）")
+
+
+st.caption("评分 = 0.45×吞吐 + 0.35×延迟 + 0.15×质量 + 0.05×显存；质量未测的配置不参与评优。")
 
 if st.button("展开搜索空间并做合法性检查"):
     result = call("/api/benchmark/auto-tuner/dry-run", {})

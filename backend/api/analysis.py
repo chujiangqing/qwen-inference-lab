@@ -34,9 +34,10 @@ GIB_IN_GB = 1.073741824
 VARIANTS = [
     ("Qwen3.8-27B-FP8", "/model/ModelScope/Qwen/Qwen3.8-27B-FP8"),
     ("Qwen3.8-27B (BF16)", "/model/ModelScope/Qwen/Qwen3.8-27B"),
+    ("Qwen3.8-27B-GGUF (Q5_K_M)", "/model/ModelScope/unsloth/Qwen3.8-27B-GGUF"),
     ("Qwen3.8-27B-EXL3-3.5bpw", "/model/ModelScope/Mia-AiLab/Qwen3.8-27B-EXL3-3.5bpw"),
-    ("Qwen3.8-27B-DFlash2-EXL3-5.0bpw", "/model/ModelScope/Mia-AiLab/Qwen3.8-27B-DFlash2-EXL3-5.0bpw"),
     ("Qwen3.8-27B-NVFP4", "/model/ModelScope/RadixArk/Qwen3.8-27B-NVFP4"),
+    ("Qwen3.8-27B-DFlash2", "/model/ModelScope/incoai/Qwen3.8-27B-DFlash2"),
 ]
 
 _CACHE: dict[str, tuple[float, object]] = {}
@@ -109,19 +110,24 @@ def model_options() -> dict:
             quant = _quant_of(path) if path.is_dir() else {"quant_method": None, "architectures": []}
             method = (quant.get("quant_method") or "").lower()
             verdict, reason = "待定", ""
+            lower = name.lower()
             if size is None:
                 verdict, reason = "缺失", "本机没有这个模型目录"
+            elif "dflash" in lower:
+                verdict, reason = "排除", f"仅 {size} GiB，是训练/草稿类附加权重，不是可独立推理的模型"
+            elif "gguf" in lower:
+                verdict, reason = "未实测", "需换 llama.cpp 引擎；该架构（混合线性注意力）在 llama.cpp 的支持未验证"
             elif method in {"exl3"}:
                 verdict, reason = "排除", "vLLM 0.31 不支持 exl3，需要 ExLlamaV2/TabbyAPI"
-            elif method in {"modelopt"} or "nvfp4" in name.lower():
+            elif method in {"modelopt"} or "nvfp4" in lower:
                 verdict, reason = "排除", f"FP4 需要 Blackwell(sm100)，本机 compute_cap={cap}"
-            elif "bf16" in name or method == "":
+            elif "bf16" in lower or method == "":
                 if vram_gib and size >= vram_gib:
                     verdict, reason = "排除", f"权重 {size} GiB ≥ 显存 {vram_gib} GiB，加载前必 OOM"
                 else:
                     verdict, reason = "可选", "显存放得下，但未实测"
             else:
-                verdict, reason = "采用", "已实测加载并通过 100 请求/档评测"
+                verdict, reason = "采用", "已实测：加载成功并通过 4 档 × 100 请求评测"
             rows.append({"name": name, "path": raw, "size_gib": size,
                          "quant_method": quant.get("quant_method"),
                          "architectures": quant.get("architectures"),
@@ -184,6 +190,67 @@ def trials() -> dict:
                     key=lambda item: item["score"], reverse=True)
     return {"trials": items, "ranked": ranked,
             "note": None if items else "AutoTuner 尚未产出结果"}
+
+
+@router.get("/kv-cache")
+def kv_cache() -> dict:
+    """从 vLLM 启动日志提取 KV 容量与并发上限（"内存碎片管理"的可核验证据）。
+
+    vLLM 启动时打印：Available KV cache memory / GPU KV cache size / Maximum concurrency，
+    运行期周期性打印 GPU KV cache usage 与 Running/Waiting 队列长度。
+    """
+    import re
+    log_dir = Path("/root/logs/vllm")
+    logs = sorted(log_dir.glob("serve_*.log"), key=lambda path: path.stat().st_mtime, reverse=True)
+    if not logs:
+        raise HTTPException(status_code=404, detail=f"找不到 vLLM 日志（{log_dir}）")
+    text = logs[0].read_text(encoding="utf-8", errors="replace")
+
+    def first(pattern: str, cast=float):
+        found = re.search(pattern, text)
+        return cast(found.group(1).replace(",", "")) if found else None
+
+    usage = [float(value) for value in re.findall(r"GPU KV cache usage: ([\d.]+)%", text)]
+    waiting = [int(value) for value in re.findall(r"Waiting: (\d+) reqs", text)]
+    running = [int(value) for value in re.findall(r"Running: (\d+) reqs", text)]
+    preempted = len(re.findall(r"[Pp]reempt", text))
+
+    return {
+        "log": str(logs[0]),
+        "available_kv_gib": first(r"Available KV cache memory: ([\d.]+) GiB"),
+        "kv_capacity_tokens": first(r"GPU KV cache size: ([\d,]+) tokens", int),
+        "per_request_tokens": first(r"Maximum concurrency for ([\d,]+) tokens per request", int),
+        "max_concurrency": first(r"tokens per request: ([\d.]+)x"),
+        "usage_percent": {"max": max(usage) if usage else None,
+                          "avg": round(sum(usage) / len(usage), 2) if usage else None,
+                          "samples": len(usage)},
+        "queue": {"max_waiting": max(waiting) if waiting else None,
+                  "max_running": max(running) if running else None},
+        "preemption_events": preempted,
+        "note": "max_waiting>0 说明请求在排队（并发被封顶）；preemption>0 说明显存紧张发生过抢占。",
+    }
+
+
+@router.get("/quality")
+def quality() -> dict:
+    """三类任务质量抽检结果（长文本 / 逻辑推理 / 代码生成）。
+
+    与官方 IFBench 分开存放：这里是补充证据，用于覆盖评分表点名的三类任务。
+    """
+    folders = sorted((ROOT / "experiments").glob("QUALITY_*"), key=lambda path: path.stat().st_mtime,
+                     reverse=True)
+    for folder in folders:
+        result = folder / "quality_result.json"
+        if result.is_file():
+            try:
+                payload = json.loads(result.read_text(encoding="utf-8"))
+            except ValueError:
+                continue
+            payload["output_dir"] = str(folder)
+            payload["report_path"] = str(folder / "quality_report.md")
+            return payload
+    return {"overall": None, "summary": {}, "results": [],
+            "note": "还没有跑过质量抽检（scripts/quality_spotcheck.py）"}
 
 
 @router.get("/accuracy")

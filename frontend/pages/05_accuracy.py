@@ -13,11 +13,13 @@ sys.path.insert(0, str(FRONTEND))
 sys.path.insert(0, str(FRONTEND / "components"))
 
 import tables  # noqa: E402
+import theme  # noqa: E402
 from api_client import call  # noqa: E402
 
-st.header("精度评测（IFBench）")
-st.caption("评分指标 prompt_level_strict：一条指令的所有约束全部满足才算通过。"
-           "官方 runner 固定 limit=100、max_tokens=32768。")
+theme.setup("精度评测", "IFBench 100 题 · prompt_level_strict · max_tokens 32768")
+
+
+
 
 experiments = call("/api/experiments?limit=50")
 rows = (experiments or {}).get("experiments", []) if isinstance(experiments, dict) else []
@@ -80,3 +82,28 @@ if choice:
     if accuracy and accuracy[0].get("raw_scores"):
         with st.expander("原始分数（JSON）"):
             st.json(json.loads(accuracy[0]["raw_scores"]))
+# ---------------------------------------------------------------- 三类任务抽检
+st.divider()
+st.subheader("三类任务质量抽检（补充证据）")
+st.caption("IFBench 测指令跟随；长文本、逻辑推理、代码生成另做 20 题自动判分抽检，结果单独统计。")
+quality = call("/api/analysis/quality")
+if isinstance(quality, dict) and quality.get("overall"):
+    overall = quality["overall"]
+    names = {"long_context": "长文本理解", "reasoning": "逻辑推理", "code": "代码生成"}
+    summary = quality.get("summary") or {}
+    columns = st.columns(4)
+    columns[0].metric("总通过", f"{overall.get('passed')}/{overall.get('total')}")
+    columns[1].metric("总通过率", f"{(overall.get('rate') or 0) * 100:.1f}%")
+    for column, category in zip(columns[2:], ("long_context", "code")):
+        stat = summary.get(category) or {}
+        column.metric(names[category], f"{(stat.get('rate') or 0) * 100:.0f}%")
+    rows = [{"编号": item.get("id"),
+             "类型": names.get(item.get("category"), item.get("category")),
+             "结果": "✅" if item.get("passed") else "❌",
+             "判定依据": str(item.get("detail"))[:80],
+             "耗时 s": item.get("seconds")} for item in quality.get("results", [])]
+    if rows:
+        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+    st.caption(f"产物：{quality.get('output_dir')}（含每题完整输出与判据）")
+else:
+    st.info("尚未跑质量抽检（服务空档时执行 scripts/quality_spotcheck.py）")
