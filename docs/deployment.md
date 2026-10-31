@@ -208,3 +208,31 @@ rm -rf /root/.cache/ai-infra-eval          # 1.7 GB（官方工具环境，重�
 ```
 
 **不要删** `experiments/` 与 `reports/`：那是全部原始证据。
+
+---
+
+## 从零复现（约 40 分钟，不含模型下载）
+
+每一步都给出"怎么判断成功"，避免只跑不验。
+
+| # | 步骤 | 命令 | 成功标志 |
+|---|---|---|---|
+| 1 | 装平台依赖 | `pip3 install --user -r requirements.txt` | 8 个钉住版本安装成功；`python3 -c "import fastapi, streamlit, plotly"` 无报错 |
+| 2 | 建推理环境 | `python3 -m venv /root/venvs/vllm031 && /root/venvs/vllm031/bin/pip install vllm==0.31.0` | `/root/venvs/vllm031/bin/vllm --version` 输出版本 |
+| 3 | 装评测环境 | `bash eval/run.sh --mode check`（**首次必须在交互终端**，官方脚本在非交互下会拒绝装依赖） | 输出 aiperf 0.13.0 / evalscope 1.13.0 就绪 |
+| 4 | 启动服务 | `bash scripts/start_model.sh --profile baseline` | `curl -s 127.0.0.1:8088/v1/models` 返回 `max_model_len: 32768` |
+| 5 | 跑基线性能 | `bash scripts/run_benchmark.sh --label E00_BASELINE --mode perf --perf-requests 100 --tokenizer /model/ModelScope/Qwen/Qwen3.8-27B-FP8` | 生成 4 个 `performance/c*/summary.json`，`status` 全为「完整」 |
+| 6 | 跑精度 | 先 `start_model.sh --profile accuracy`（40960），再 `run_benchmark.sh --mode accuracy` | `accuracy/summary.json` 的 `generated_samples = 100` |
+| 7 | 生成报告 | `python3 scripts/generate_report.py` | 更新 `docs/实验报告.md`，含四档表与精度节 |
+| 8 | 自检 | `python3 -m unittest discover -s tests` 与 `python3 audit/verify_runner.py` | 46 个测试通过；84 条审计通过 |
+| 9 | 验证评测未被改动 | `python3 -m unittest tests.test_pipeline_contracts -v` | `eval/` 三个文件与 `eval.zip` 的 SHA-256 一致 |
+| 10 | 起前端 | `python3 -m streamlit run frontend/app.py --server.port 8501` | `curl 127.0.0.1:8501/_stcore/health` 返回 `ok` |
+
+**依赖边界要分清**（装错环境是最常见的坑）：
+
+| 层 | 环境 | 装什么 |
+|---|---|---|
+| 平台（API + 前端） | 系统 python3.10 | `requirements.txt` 里的 8 个包 |
+| 推理引擎 | `/root/venvs/vllm031` | 只装 `vllm`（自带 torch/transformers/flashinfer） |
+| 评测工具 | 官方脚本自建 | `aiperf` / `evalscope`，由 `eval/run.sh` 管理 |
+
