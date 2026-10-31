@@ -18,7 +18,9 @@ def compare_cells(baseline: list[dict], candidate: list[dict]) -> list[dict]:
         reference = base_map.get(cell.get("concurrency"))
         if not reference:
             continue
-        row = {"concurrency": cell.get("concurrency")}
+        row = {"concurrency": cell.get("concurrency"),
+               "requests_base": reference.get("request_count"),
+               "requests_new": cell.get("request_count")}
         for metric in METRICS:
             row[f"{metric}_base"] = reference.get(metric)
             row[f"{metric}_new"] = cell.get(metric)

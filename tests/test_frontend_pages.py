@@ -22,6 +22,14 @@ class _StopPage(Exception):
     """模拟 streamlit 的 st.stop()：正常终止页面渲染，不算错误。"""
 
 
+class _ColumnConfigStub:
+    """streamlit 的 column_config：任何列类型都返回一个占位配置。"""
+
+    def __getattr__(self, name: str):
+        def _factory(*args, **kwargs):
+            return {"type": name, "label": args[0] if args else kwargs.get("label")}
+        return _factory
+
 class _Recorder:
     """替身：任何属性访问都返回可调用的记录器。"""
 
@@ -63,6 +71,7 @@ def _install_stub() -> _Recorder:
     module = types.ModuleType("streamlit")
     module.__getattr__ = recorder.__getattr__          # 模块级属性
     module.session_state = {}
+    module.column_config = _ColumnConfigStub()
     sys.modules["streamlit"] = module
     # plotly 要按"模块 + 子模块"建，否则 `import plotly.express as px` 会把 px 绑成函数
     express = types.ModuleType("plotly.express")
@@ -207,6 +216,7 @@ class CompareModeTest(unittest.TestCase):
         module = types.ModuleType("streamlit")
         module.__getattr__ = recorder.__getattr__
         module.session_state = {}
+        module.column_config = _ColumnConfigStub()
         sys.modules["streamlit"] = module
 
         api = types.ModuleType("api_client")
@@ -237,7 +247,7 @@ class CompareModeTest(unittest.TestCase):
 
         names = [item[0] for item in recorder.calls]
         self.assertIn("dataframe", names, "对比表没画出来")
-        self.assertIn("bar_chart", names, "对比图没画出来")
+        self.assertTrue("plotly_chart" in names or "bar_chart" in names, "对比图没画出来")
         conclusions = [args[0] for name, args, _ in recorder.calls if name == "success" and args]
         self.assertTrue(any("12.3%" in str(text) for text in conclusions),
                         f"结论没显示：{conclusions}")

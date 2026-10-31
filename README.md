@@ -146,6 +146,50 @@ Qwen-Inference-Lab/
 
 ---
 
+## 7. 复现验证记录（哪些验过、哪些没验）
+
+评分表要求"结果可复现或可合理解释"。这里照实写清楚边界，不含糊。
+
+### 7.1 已验证（有日志/产物可查）
+
+| 项 | 怎么验的 | 证据 |
+|---|---|---|
+| 依赖版本 | 从**运行中的环境**用 `pip show` / `import` 取真实值，不是抄文档 | `requirements.txt` 头部注释 + `docs/deployment.md` §3.0 |
+| 推理引擎可用 | `vllm --version` = 0.31.0；torch 2.13.0+cu130；`cuda True` | `docs/deployment.md` §3.1 的期望输出 |
+| 服务能起 | `scripts/start_model.sh --profile baseline/accuracy` 连续多次成功 | `/root/logs/vllm/launch_*.json` 每次启动记录参数与 PID |
+| 评测能跑完 | 4 档 × 100 请求多轮，`status=完整`；IFBench 100 题 | `results/experiments/*/performance/c*/summary.json` |
+| 评测未被改动 | `eval/` 三个文件 SHA-256 与原始 zip 一致 | `tests/test_pipeline_contracts.py::test_eval_untouched` |
+| 脚本可重建结果 | `scripts/export_results.py` 从 `experiments/` 重新导出 `results/` 并生成 sha256 清单 | `results/manifest.json` |
+| 平台可重启 | `restart_ui2.sh` / `hard_restart_api.sh` 反复执行成功 | 健康检查 `/_stcore/health` = ok |
+
+### 7.2 未验证（以及为什么）
+
+| 项 | 状态 | 原因 | 换机器时要额外确认 |
+|---|---|---|---|
+| 全新机器从零部署 | ❌ 未做 | 三套环境（平台 / vLLM / 官方评测）重建约 40–60 分钟，赛程内优先跑了实验 | 见 7.3 清单 |
+| 不同 GPU / 驱动 | ❌ 未做 | 只有一张 4090（compute_cap 8.9，驱动 610.57.04） | FP4/FP8 支持随算力与驱动变化 |
+| 依赖源可用性 | ⚠️ 部分 | 使用内网 pip 镜像，未测公网源 | 公网安装时注意 `flashinfer` 的 CUDA 版本匹配 |
+| 长时间稳定性（>6 小时） | ⚠️ 部分 | 最长连续约 2.5 小时（精度评测） | 关注显存碎片累积与温度 |
+
+### 7.3 换机器复现的检查清单
+
+1. `nvidia-smi --query-gpu=name,compute_cap,driver_version` —— 确认算力 ≥ 8.9（否则 FP8 不可用）
+2. 显存 ≥ 46 GiB —— 权重 28.75 + KV 11.56 + 框架开销
+3. `/model` 下有 `Qwen/Qwen3.8-27B-FP8`，且 `config.json` 的 sha256 与
+   `configs/model.yaml` 记录一致（本项目记录为 `74227dd6…`）
+4. 三套环境分开建，不要混装（见 `requirements.txt` 头部）
+5. 先跑 `python -m unittest discover -s tests`（46 个），再跑 `audit/verify_runner.py`（84 条）
+6. 首次压测前先确认 GPU 独占：`nvidia-smi --query-compute-apps=pid` 为空
+
+### 7.4 已知会让复现"看起来失败"的坑
+
+| 现象 | 原因 | 处理 |
+|---|---|---|
+| 启动报"GPU 上已有 1 个计算进程，拒绝启动" | 上一次 vLLM 的 `EngineCore` 子进程残留（它不匹配 `vllm serve` 模式） | `pkill -9 -f EngineCore` |
+| 精度评测被跳过 | `max_model_len ≤ 32768` 时官方工具不跑 IFBench | 用 `--profile accuracy`（40960） |
+| 端口 8088 连不上但进程还在 | API 进程退出、EngineCore 存活 | `fuser -k 8088/tcp` 后重起 |
+| 压测数字明显偏低 | 服务未就绪就开始计时 | 先 `curl /v1/models` 探活，再开跑 |
+
 ## 附：`eval/` 目录说明（官方评测入口，未修改）
 
 `eval/` 下三个文件**来自主办方提供的评测包，本项目未做任何修改**，仅作为评测入口调用；

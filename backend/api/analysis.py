@@ -186,9 +186,17 @@ def trials() -> dict:
     except ValueError as error:
         return {"trials": [], "ranked": [], "note": f"trials.json 解析失败：{error}"}
     items = data.get("trials") or []
-    ranked = sorted([item for item in items if item.get("valid") and item.get("score") is not None],
-                    key=lambda item: item["score"], reverse=True)
-    return {"trials": items, "ranked": ranked,
+    # 评分要等整轮结束才计算；跑的过程中先按吞吐排序，否则页面永远显示"无结果"
+    scored = [item for item in items if item.get("valid") and item.get("score") is not None]
+    if scored:
+        ranked = sorted(scored, key=lambda item: item["score"], reverse=True)
+        basis = "score"
+    else:
+        ranked = sorted([item for item in items
+                         if item.get("valid") and item.get("output_throughput")],
+                        key=lambda item: item["output_throughput"], reverse=True)
+        basis = "throughput"
+    return {"trials": items, "ranked": ranked, "rank_basis": basis,
             "note": None if items else "AutoTuner 尚未产出结果"}
 
 
@@ -251,6 +259,86 @@ def quality() -> dict:
             return payload
     return {"overall": None, "summary": {}, "results": [],
             "note": "还没有跑过质量抽检（scripts/quality_spotcheck.py）"}
+
+
+@router.get("/factorial")
+def factorial() -> dict:
+    """双因子视角：把 (MTP × max_num_seqs) 的四格拼出来，并算主效应与交互项。
+
+    为什么要单独一个接口：
+    两两对比页只能回答"这两个实验差多少"，回答不了"两个变量一起变会怎样"。
+    因子设计把四格放在一起，才能判断两个优化是"可加"还是"互相抢资源"。
+    """
+    import re
+
+    database.init(ROOT)
+    rows = repo.list_experiments(DB_PATH, limit=100)
+    cells: list[dict] = []
+    for row in rows:
+        name = str(row.get("experiment_name") or "")
+        upper = name.upper()
+        if upper.startswith("FINAL") or "BASELINE" in upper and not upper.startswith("BASE20"):
+            continue                      # 100 请求/档的正式实验不进 20/档的因子表
+        detail = repo.experiment_detail(DB_PATH, row["id"]) or {}
+        perf = [cell for cell in (detail.get("performance") or []) if cell.get("status") == "完整"]
+        if not perf:
+            continue
+        requests = max((cell.get("request_count") or 0) for cell in perf)
+        if requests != 20:
+            continue
+        best = max(perf, key=lambda cell: cell.get("output_throughput") or 0)
+        mtp = "mtp" in name.lower()
+        seq_match = re.search(r"seq(\d+)", name)
+        ctx_match = re.search(r"ctx(\d+)", name)
+        cells.append({
+            "experiment": name,
+            "experiment_id": row["id"],
+            "mtp": mtp,
+            "max_num_seqs": int(seq_match.group(1)) if seq_match else 4,
+            "max_model_len": int(ctx_match.group(1)) if ctx_match else 32768,
+            "requests": requests,
+            "throughput": best.get("output_throughput"),
+            "ttft_p95": best.get("ttft_p95"),
+            "tpot_p95": best.get("tpot_p95"),
+            "concurrency": best.get("concurrency"),
+        })
+
+    def pick(mtp: bool, seq: int):
+        found = [c for c in cells if c["mtp"] == mtp and c["max_num_seqs"] == seq]
+        if not found:
+            return None
+        return max(found, key=lambda c: c["throughput"] or 0)
+
+    off4, off8 = pick(False, 4), pick(False, 8)
+    on4, on8 = pick(True, 4), pick(True, 8)
+
+    def diff(a, b):
+        if not a or not b or not a.get("throughput"):
+            return None
+        return round(b["throughput"] - a["throughput"], 2)
+
+    effect_seq_off = diff(off4, off8)          # 提并发（MTP 关时）
+    effect_seq_on = diff(on4, on8)             # 提并发（MTP 开时）
+    effect_mtp_4 = diff(off4, on4)             # 开 MTP（4 路时）
+    effect_mtp_8 = diff(off8, on8)             # 开 MTP（8 路时）
+    interaction = None
+    if effect_seq_off is not None and effect_seq_on is not None:
+        interaction = round(effect_seq_on - effect_seq_off, 2)
+
+    if interaction is None:
+        verdict = "四格未齐，等组合实验补（mtp + seq8）"
+    elif interaction > 1:
+        verdict = "正交互：两个改动互相放大"
+    elif interaction < -1:
+        verdict = "负交互（饱和）：两者在抢同一个瓶颈，叠加收益递减"
+    else:
+        verdict = "可加：组合收益≈两个单变量收益之和"
+
+    return {"cells": cells, "grid": {
+                "off_4": off4, "off_8": off8, "on_4": on4, "on_8": on8},
+            "effects": {"seq_at_mtp_off": effect_seq_off, "seq_at_mtp_on": effect_seq_on,
+                        "mtp_at_seq4": effect_mtp_4, "mtp_at_seq8": effect_mtp_8},
+            "interaction": interaction, "verdict": verdict}
 
 
 @router.get("/accuracy")

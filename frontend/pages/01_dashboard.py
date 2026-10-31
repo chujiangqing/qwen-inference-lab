@@ -11,6 +11,7 @@ FRONTEND = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(FRONTEND))
 sys.path.insert(0, str(FRONTEND / "components"))
 
+import charts  # noqa: E402
 import gpu_cards  # noqa: E402
 import tables  # noqa: E402
 import theme  # noqa: E402
@@ -40,10 +41,11 @@ with theme.card():
             headline += f"（{delta:+.1f}% vs 基线）"
         st.markdown(f"### 当前最优：{headline}")
         theme.metrics([
-            ("输出吞吐", f"{best.get('output_throughput'):.1f} tok/s" if best.get("output_throughput") else "—"),
-            ("TTFT P95", f"{best.get('ttft_p95_ms'):.0f} ms" if best.get("ttft_p95_ms") else "—"),
-            ("峰值显存", f"{best.get('vram_peak_gib')} GiB" if best.get("vram_peak_gib") else "—"),
-            ("候选/有效", f"{len(trials)} / {len(ranked)}"),
+            ("输出吞吐", theme.num(best.get("output_throughput"), 1, " tok/s"),
+             theme.delta_pct(best.get("output_throughput"), base_tps)),
+            ("TTFT P95", theme.num(best.get("ttft_p95_ms"), 0, " ms")),
+            ("TPOT P95", theme.num(best.get("tpot_p95_ms"), 1, " ms")),
+            ("候选 / 有效", f"{len(trials)} / {len(ranked)}"),
         ])
     elif baseline:
         st.markdown(f"### 基线已就绪：{baseline['experiment_name']}")
@@ -67,8 +69,11 @@ if baseline and final_rows:
                                       "ttft_p95_delta_pct") if column in frame.columns]
         view = frame[keep].copy()
         view.columns = ["并发", "吞吐·基线", "吞吐·优化", "吞吐变化", "TTFT·基线", "TTFT·优化", "TTFT 变化"][:len(keep)]
-        st.dataframe(view, use_container_width=True, hide_index=True)
-        st.bar_chart(frame.set_index("concurrency")[["output_throughput_base", "output_throughput_new"]])
+        st.dataframe(theme.colored_delta(view, ["吞吐变化", "TTFT 变化"]),
+                     use_container_width=True, hide_index=True)
+        charts.grouped_bars(frame, "concurrency",
+                            ["output_throughput_base", "output_throughput_new"],
+                            "吞吐对比（并排）", ["基线", "优化"])
 
 if isinstance(baseline, dict):
     report = call(f"/api/analysis/bottleneck?experiment_id={baseline['id']}")
@@ -80,7 +85,15 @@ if isinstance(baseline, dict):
         view = frame[keep].copy()
         view.columns = ["并发", "输出吞吐 tok/s", "TPOT P95 ms", "权重读取 GB/s", "占峰值带宽"][:len(keep)]
         with theme.card():
-            st.dataframe(view, use_container_width=True, hide_index=True)
+            st.dataframe(
+                view, use_container_width=True, hide_index=True,
+                column_config={
+                    "占峰值带宽": st.column_config.ProgressColumn(
+                        "占峰值带宽", min_value=0, max_value=100, format="%.1f%%"),
+                    "输出吞吐 tok/s": st.column_config.NumberColumn(format="%.2f"),
+                    "TPOT P95 ms": st.column_config.NumberColumn(format="%.1f"),
+                    "权重读取 GB/s": st.column_config.NumberColumn(format="%.0f"),
+                })
             st.caption(f"权重 {report.get('weights_gib')} GiB，每生成 1 个 token 需全量读取一遍；"
                        f"显存带宽峰值 {report.get('peak_bandwidth_gbs')} GB/s。"
                        "并发 1 已接近带宽上限，说明单请求速度由带宽决定，加并发只能摊薄权重读取。")

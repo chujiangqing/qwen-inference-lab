@@ -25,7 +25,8 @@ if not rows:
     st.info("暂无实验，请先在「实验管理」发起一次评测")
     st.stop()
 
-options = {f"{row['id']} · {row['experiment_name']}": row["id"] for row in rows}
+options = {f"{row['id']} · {row.get('display_name') or row['experiment_name']}（{row.get('request_count') or '?'} 请求/档）": row["id"]
+           for row in rows}
 mode = st.radio("查看方式", ["单实验曲线", "基线 vs 优化对比"], horizontal=True)
 
 if mode == "单实验曲线":
@@ -41,13 +42,41 @@ if mode == "单实验曲线":
     st.caption("TTFT/TPOT/E2E 单位为毫秒（AIPerf 原生单位）；TPOT = (E2E − TTFT) / (OSL − 1)。")
 
 else:
-    st.caption("选择两个实验按并发档对齐比较；百分比变化为正表示后者更大。"
-               "**只有当两次实验用同样的请求数/档时才可直接比大小。**")
-    names = list(options)
+    st.caption("左侧固定选基线（E00_BASELINE_PERF），右侧选候选，每行才是干净的逐档对比。"
+               "百分比变化 = 右 ÷ 左 − 1；只有两次实验请求数/档相同时才可以比大小。")
+    # 标注每个实验的"每档请求数"，并自动把左侧配对成同口径的基线
+    profile = call("/api/experiments/request-profile") or {}
+    profile = profile.get("profile", {}) if isinstance(profile, dict) else {}
+
+    def requests_of(exp_id: int):
+        return (profile.get(str(exp_id)) or {}).get("requests")
+
+    labels = {name: f"{name}（{(requests_of(exp_id) or '?')} 请求/档）"
+              for name, exp_id in options.items()}
+    names = list(labels)
+
     left, right = st.columns(2)
-    base_name = left.selectbox("基线实验", names, index=0)
-    default_index = 1 if len(names) > 1 else 0
-    cand_name = right.selectbox("对比实验（优化后）", names, index=default_index)
+    # 默认右侧选第一个候选（不是基线本身）
+    cand_default = 0
+    for index, name in enumerate(names):
+        if "BASELINE" not in name.upper() and "BASE20" not in name.upper():
+            cand_default = index
+            break
+    cand_name = right.selectbox("对比实验（右）", names, index=cand_default,
+                                format_func=lambda name: labels[name])
+    cand_requests = requests_of(options[cand_name])
+
+    # 左侧自动选同请求数的基线；没有就退回"基线"字样或第一项
+    base_index = 0
+    for index, name in enumerate(names):
+        if requests_of(options[name]) != cand_requests:
+            continue
+        upper = name.upper()
+        if "BASE20" in upper or "BASELINE" in upper:
+            base_index = index
+            break
+    base_name = left.selectbox("参照实验（左）", names, index=base_index,
+                               format_func=lambda name: labels[name])
 
     base_id, cand_id = options[base_name], options[cand_name]
     if base_id == cand_id:
@@ -59,23 +88,61 @@ else:
         st.error(f"对比失败：{data}")
         st.stop()
 
-    st.success(data.get("conclusion") or "已生成对比")
+    first = (data.get("rows") or [{}])[0]
+    req_base, req_new = first.get("requests_base"), first.get("requests_new")
+    conclusion = data.get("conclusion") or "已生成对比"
+    delta = data.get("throughput_delta_pct")
+    if req_base and req_new and req_base != req_new:
+        st.warning(f"{conclusion}　｜　口径不同：左 {req_base} 请求/档 vs 右 {req_new} 请求/档，"
+                   "此表只用于看趋势；正式结论以 100 请求/档复测为准。")
+    elif delta is not None and delta < 0:
+        st.error(f"{conclusion}（右侧更慢）")
+    else:
+        st.success(conclusion)
 
     frame = pd.DataFrame(data["rows"])
-    view = frame[["concurrency",
-                  "output_throughput_base", "output_throughput_new", "output_throughput_delta_pct",
-                  "ttft_p95_base", "ttft_p95_new", "ttft_p95_delta_pct",
-                  "tpot_p95_base", "tpot_p95_new", "tpot_p95_delta_pct"]].copy()
-    view.columns = ["并发", "吞吐-基线", "吞吐-对比", "吞吐变化%",
-                    "TTFT-基线", "TTFT-对比", "TTFT变化%",
-                    "TPOT-基线", "TPOT-对比", "TPOT变化%"]
-    st.dataframe(view, use_container_width=True, hide_index=True)
+    comparable = bool(req_base and req_new and req_base == req_new)
+    if comparable:
+        view = frame[["concurrency",
+                      "output_throughput_base", "output_throughput_new", "output_throughput_delta_pct",
+                      "ttft_p95_base", "ttft_p95_new", "ttft_p95_delta_pct",
+                      "tpot_p95_base", "tpot_p95_new", "tpot_p95_delta_pct"]].copy()
+    else:
+        # 请求数不同：延迟类指标（P95）不可比，只保留吞吐
+        view = frame[["concurrency",
+                      "output_throughput_base", "output_throughput_new",
+                      "output_throughput_delta_pct"]].copy()
+    if comparable:
+        view.columns = ["并发", "吞吐·基线", "吞吐·优化", "吞吐变化%",
+                        "TTFT·基线", "TTFT·优化", "TTFT变化%",
+                        "TPOT·基线", "TPOT·优化", "TPOT变化%"]
+    else:
+        view.columns = ["并发", "吞吐·基线", "吞吐·优化", "吞吐变化%"]
+    st.dataframe(theme.colored_delta(view, ["吞吐变化%", "TTFT变化%", "TPOT变化%"],
+                                     invert=("TTFT变化%", "TPOT变化%")),
+                 use_container_width=True, hide_index=True,
+                 column_config={
+                     "并发": st.column_config.NumberColumn("并发", format="%d"),
+                     "吞吐变化%": st.column_config.NumberColumn(format="%+.2f%%"),
+                     "TTFT变化%": st.column_config.NumberColumn(format="%+.2f%%"),
+                     "TPOT变化%": st.column_config.NumberColumn(format="%+.2f%%"),
+                     "吞吐·基线": st.column_config.NumberColumn(format="%.2f"),
+                     "吞吐·优化": st.column_config.NumberColumn(format="%.2f"),
+                     "TTFT·基线": st.column_config.NumberColumn(format="%.0f"),
+                     "TTFT·优化": st.column_config.NumberColumn(format="%.0f"),
+                     "TPOT·基线": st.column_config.NumberColumn(format="%.1f"),
+                     "TPOT·优化": st.column_config.NumberColumn(format="%.1f"),
+                 })
 
     st.subheader("吞吐对比")
-    st.bar_chart(frame.set_index("concurrency")[["output_throughput_base", "output_throughput_new"]])
+    charts.grouped_bars(frame, "concurrency",
+                        ["output_throughput_base", "output_throughput_new"],
+                        "吞吐对比（并排，不是堆叠）", ["基线", "对比"])
 
     st.subheader("TTFT P95 对比（越低越好）")
-    st.bar_chart(frame.set_index("concurrency")[["ttft_p95_base", "ttft_p95_new"]])
+    charts.grouped_bars(frame, "concurrency",
+                        ["ttft_p95_base", "ttft_p95_new"],
+                        "TTFT P95 对比（毫秒，越低越好）", ["基线", "对比"])
 
     with st.expander("原始对比数据（JSON）"):
         st.json(data)
@@ -95,6 +162,19 @@ if isinstance(trials, dict) and trials.get("trials"):
     view.columns = ["候选", "维度", "状态", "有效", "输出吞吐", "TTFT P95", "TPOT P95",
                     "E2E P95", "峰值显存", "得分"][:len(keep)]
     st.dataframe(view, use_container_width=True, hide_index=True)
+
+    # 候选吞吐对比（含基线参考线）
+    base_tps = None
+    for row in rows:
+        if "BASELINE" in str(row.get("experiment_name", "")).upper() and row.get("best_output_throughput"):
+            base_tps = max(base_tps or 0, row["best_output_throughput"])
+    if "output_throughput" in frame.columns and frame["output_throughput"].notna().any():
+        chart_frame = frame.dropna(subset=["output_throughput"]).set_index("candidate")[["output_throughput"]]
+        chart_frame.columns = ["输出吞吐 tok/s"]
+        st.bar_chart(chart_frame)
+        if base_tps:
+            st.caption(f"基线（100 请求/档）为 {base_tps:.2f} tok/s；候选为 20 请求/档，仅用于排序。")
+
     ranked = trials.get("ranked") or []
     if ranked:
         st.success(f"当前排名第一：{ranked[0]['candidate']}（得分 {ranked[0].get('score')}）；"
